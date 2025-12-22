@@ -1,0 +1,33 @@
+<Login>
+  <CRMLS>
+    <UserName>trchaneri</UserName>
+    <Password>24Hoursjack!!</Password>
+  </CRMLS>
+  <PRIVY>
+    <UserName>erictherealcashbuyer@gmail.com</UserName>
+    <Password>24Hoursjack!</Password>
+  </PRIVY>
+  <OFFERGUN>
+	<UserName>eric.tghcapital@gmail.com</UserName>
+	<Password>24Hoursjack</Password>
+  </OFFERGUN>
+  <PIPE>
+	<UserName>eric.tghcapital@gmail.com</UserName>
+	<Password>main1234</Password>
+	  <Api>2b503ef3f01594688d3c8d7d2cbb72b060dd25ea</Api>
+	  <Company>tghcapital</Company>
+  </PIPE>	
+  <MLSStatus>
+    <Active>A,Active</Active>
+    <Sold>Closed,S,Sold</Sold>
+    <Hold>Hold,H</Hold>
+    <Pending>Pending,P,Act</Pending>
+    <Other>Expired,Cancelled,Withdrawn,Withdraw</Other>
+  </MLSStatus>
+  <DefaultEmailAccount>erictherealcashbuyer@gmail.com</DefaultEmailAccount>
+  <MLSSETTINGS>	
+	<Miles>0.25</Miles>
+	<Subcat>Family</Subcat>
+	<Sqft>300</Sqft>
+  </MLSSETTINGS>
+</Login>
