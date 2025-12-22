@@ -77,9 +77,9 @@ Class MainWindow
         InitializeComboBoxData()
         AddHandler WebViewMain.CoreWebView2InitializationCompleted, AddressOf WebView_CoreWebView2InitializationCompleted
         AddHandler WebViewComp.CoreWebView2InitializationCompleted, AddressOf WebView_CoreWebView2InitializationCompleted
-        AddHandler WebViewStatus.CoreWebView2InitializationCompleted, AddressOf WebViewStatus_CoreWebView2InitializationCompleted
+        'AddHandler WebViewStatus.CoreWebView2InitializationCompleted, AddressOf WebViewStatus_CoreWebView2InitializationCompleted
         AddHandler WebViewPrivy.CoreWebView2InitializationCompleted, AddressOf WebViewStatus_CoreWebView2InitializationCompleted
-        AddHandler WebViewPipe.CoreWebView2InitializationCompleted, AddressOf WebViewStatus_CoreWebView2InitializationCompleted
+        'AddHandler WebViewPipe.CoreWebView2InitializationCompleted, AddressOf WebViewStatus_CoreWebView2InitializationCompleted
         AddHandler WebViewog.CoreWebView2InitializationCompleted, AddressOf WebViewStatus_CoreWebView2InitializationCompleted
         AddHandler WebViewOg2.CoreWebView2InitializationCompleted, AddressOf WebViewStatus_CoreWebView2InitializationCompleted
 
@@ -87,7 +87,7 @@ Class MainWindow
         chkAutoFill.IsChecked = isAutofillEnabled
         WebViewMain.Source = New Uri("https://matrix.crmls.org/Matrix/Default.aspx")
         WebViewPrivy.Source = New Uri("https://app.privy.pro/users/sign_in")
-        WebViewPipe.Source = New Uri("https://app.pipedrive.com/auth/login")
+        'WebViewPipe.Source = New Uri("https://app.pipedrive.com/auth/login")
         WebViewog.Source = New Uri("https://www.offergun.com/generate")
         WebViewog2.Source = New Uri("https://www.offergun.com/offer-history")
         'TabControlMain.SelectedIndex = 5
@@ -104,7 +104,7 @@ Class MainWindow
 
         'LoadDataGrid()
         LoadSettings()
-        rdoMessage.IsChecked = True
+        'rdoMessage.IsChecked = True
         origLeftSidebarWidth = SidebarColumn.Width.Value
         origRightSidebarWidth = RightSidebarColumn.Width.Value
     End Sub
@@ -766,17 +766,17 @@ Class MainWindow
         'Set query        
         sFieldList = "MLSListingID,SavedAddress,City,Seller,SellerEmail,LACell,LADirect,SellerPhone,CoSeller,Emailed,OfferPrice,ARV,ListPrice,ClosePrice,Status,SqFt,DateAdded,pdDealId,pdStageName"
         sCondition = ""
-        If rdoActive.IsChecked = True Then
-            sCondition = "Active"
-        ElseIf rdoPending.IsChecked = True Then
-            sCondition = "Pending"
-        ElseIf rdoSold.IsChecked = True Then
-            sCondition = "Sold"
-        ElseIf rdoHold.IsChecked = True Then
-            sCondition = "Hold"
-        ElseIf rdoOth.IsChecked = True Then
-            sCondition = "Other"
-        End If
+        'If rdoActive.IsChecked = True Then
+        '    sCondition = "Active"
+        'ElseIf rdoPending.IsChecked = True Then
+        '    sCondition = "Pending"
+        'ElseIf rdoSold.IsChecked = True Then
+        '    sCondition = "Sold"
+        'ElseIf rdoHold.IsChecked = True Then
+        '    sCondition = "Hold"
+        'ElseIf rdoOth.IsChecked = True Then
+        '    sCondition = "Other"
+        'End If
 
         'Execute Query
         If sCondition IsNot "" Then
@@ -791,8 +791,8 @@ Class MainWindow
         IsSelectedColumn.DefaultValue = False
         dataTable.Columns.Add(IsSelectedColumn)
 
-        dgDetails.ItemsSource = dataTable.DefaultView
-        dgDetails.Tag = dataTable
+        'dgDetails.ItemsSource = dataTable.DefaultView
+        'dgDetails.Tag = dataTable
 
         'dgDetails.UpdateLayout()
         'dgDetails.ScrollIntoView(dgDetails.Items(0), dgDetails.Columns(dgDetails.Columns.Count - 1))
@@ -831,7 +831,7 @@ Class MainWindow
     Private Function LoadEmailCombo() As String
         dataTable = fxCommon.SQLExecuteReader("select * from Property")
         dataTable.Columns.Add("Select", GetType(Boolean)).SetOrdinal(0)
-        dgDetails.ItemsSource = dataTable.DefaultView
+        'dgDetails.ItemsSource = dataTable.DefaultView
         Return String.Empty
     End Function
 
@@ -877,23 +877,23 @@ Class MainWindow
 
         ElseIf (DirectCast(sender, System.Windows.FrameworkElement).Name = "dgDetails") Then
             tabChangeInitiated = False
-            If dgDetails.SelectedItems.Count > 0 Then
+            'If dgDetails.SelectedItems.Count > 0 Then
 
-                'LoadNotes
-                Dim MLSID As String = DirectCast(dgDetails.SelectedItems(0), System.Data.DataRowView).Row.ItemArray(0).ToString()
-                Dim SavedAddress As String = DirectCast(dgDetails.SelectedItems(0), System.Data.DataRowView).Row.ItemArray(1).ToString()
-                Dim Seller As String = DirectCast(dgDetails.SelectedItems(0), System.Data.DataRowView).Row.ItemArray(3).ToString()
-                Dim dtNotes = fxCommon.SQLExecuteReader("select Date, Notes from Notes where MLSListingID='" & MLSID & "' ORDER BY rowid DESC")  'Order by strftime('%Y-%m-%d %H:%M:%S', date) ASC")' Order by strftime('%Y-%m-%d %H:%M:%S', date) ASC")
-                dgNotes.ItemsSource = dtNotes.DefaultView
+            '    'LoadNotes
+            '    Dim MLSID As String = DirectCast(dgDetails.SelectedItems(0), System.Data.DataRowView).Row.ItemArray(0).ToString()
+            '    Dim SavedAddress As String = DirectCast(dgDetails.SelectedItems(0), System.Data.DataRowView).Row.ItemArray(1).ToString()
+            '    Dim Seller As String = DirectCast(dgDetails.SelectedItems(0), System.Data.DataRowView).Row.ItemArray(3).ToString()
+            '    Dim dtNotes = fxCommon.SQLExecuteReader("select Date, Notes from Notes where MLSListingID='" & MLSID & "' ORDER BY rowid DESC")  'Order by strftime('%Y-%m-%d %H:%M:%S', date) ASC")' Order by strftime('%Y-%m-%d %H:%M:%S', date) ASC")
+            '    dgNotes.ItemsSource = dtNotes.DefaultView
 
-                'SMS
-                Dim dtSMS = fxCommon.SQLExecuteReader("Select * from EmailTemplate where Name like '%SMS%'")
-                Seller = CultureInfo.CurrentCulture.TextInfo.ToTitleCase(Seller.Split(" ")(0).ToLower())
-                For Each rowData As DataRow In dtSMS.Rows
-                    txtSMS.Text = rowData("Message").ToString().Replace("<<Address>>", SavedAddress).Replace("<<First Name>>", Seller)
-                Next
+            '    'SMS
+            '    Dim dtSMS = fxCommon.SQLExecuteReader("Select * from EmailTemplate where Name like '%SMS%'")
+            '    Seller = CultureInfo.CurrentCulture.TextInfo.ToTitleCase(Seller.Split(" ")(0).ToLower())
+            '    For Each rowData As DataRow In dtSMS.Rows
+            '        txtSMS.Text = rowData("Message").ToString().Replace("<<Address>>", SavedAddress).Replace("<<First Name>>", Seller)
+            '    Next
 
-            End If
+            'End If
         End If
 
         'Dim selectedIds As New List(Of String)
@@ -902,15 +902,15 @@ Class MainWindow
     End Sub
 
     Private Sub ProcLoadNotesDG()
-        Try
-            If dgDetails.SelectedItems.Count > 0 Then
-                Dim MLSID As String = DirectCast(dgDetails.SelectedItems(0), System.Data.DataRowView).Row.ItemArray(0).ToString()
-                Dim dtNotes = fxCommon.SQLExecuteReader("select Date, Notes from Notes where MLSListingID='" & MLSID & "' ORDER BY rowid DESC")  'Order by strftime('%Y-%m-%d %H:%M:%S', date) ASC")
-                dgNotes.ItemsSource = dtNotes.DefaultView
-            End If
-        Catch ex As System.Exception
-            MessageBox.Show("Error in loading Notes: " & ex.Message)
-        End Try
+        'Try
+        '    If dgDetails.SelectedItems.Count > 0 Then
+        '        Dim MLSID As String = DirectCast(dgDetails.SelectedItems(0), System.Data.DataRowView).Row.ItemArray(0).ToString()
+        '        Dim dtNotes = fxCommon.SQLExecuteReader("select Date, Notes from Notes where MLSListingID='" & MLSID & "' ORDER BY rowid DESC")  'Order by strftime('%Y-%m-%d %H:%M:%S', date) ASC")
+        '        dgNotes.ItemsSource = dtNotes.DefaultView
+        '    End If
+        'Catch ex As System.Exception
+        '    MessageBox.Show("Error in loading Notes: " & ex.Message)
+        'End Try
     End Sub
 
     Private Async Function MainSave_ClickAsync(sender As Object, e As RoutedEventArgs) As Task
@@ -989,23 +989,23 @@ Class MainWindow
 
     Private Sub SaveNotes_Click(sender As Object, e As RoutedEventArgs)
 
-        If (txtAddNotes.Text.Trim.Length > 0) Then
-            If dgDetails.SelectedItems.Count > 0 Then
-                Dim MLSID As String = DirectCast(dgDetails.SelectedItems(0), System.Data.DataRowView).Row.ItemArray(0).ToString()
-                Dim SQLiteinsertcmd As New SQLiteCommand("insert into Notes values (@MLSListingID,@Datetime,@Emailed)")
+        'If (txtAddNotes.Text.Trim.Length > 0) Then
+        '    If dgDetails.SelectedItems.Count > 0 Then
+        '        Dim MLSID As String = DirectCast(dgDetails.SelectedItems(0), System.Data.DataRowView).Row.ItemArray(0).ToString()
+        '        Dim SQLiteinsertcmd As New SQLiteCommand("insert into Notes values (@MLSListingID,@Datetime,@Emailed)")
 
-                SQLiteinsertcmd.Parameters.AddWithValue("@MLSListingID", MLSID)
-                SQLiteinsertcmd.Parameters.AddWithValue("@Datetime", Date.Now.ToString("yyyy-MM-dd HH:mm:ss"))
-                SQLiteinsertcmd.Parameters.AddWithValue("@Emailed", txtAddNotes.Text)
-                fxCommon.SQLExecuteCommand(SQLiteinsertcmd)
-                'fxCommon.SQLExecuteQuery("insert into Notes values ('" & MLSID & "','" & Date.Now.ToString("yyyy-MM-dd HH:mm:ss") & "','" & txtAddNotes.Text & "')")
-                txtAddNotes.Text = String.Empty
-                ' Dim dtNotes = fxCommon.SQLExecuteReader("select Date, Notes from Notes where MLSListingID='" & MLSID & "' Order by CONVERT(datetime, Date, 120) Desc")
-                Dim dtNotes = fxCommon.SQLExecuteReader("select Date, Notes from Notes where MLSListingID='" & MLSID & "' ORDER BY rowid DESC") ' Order by strftime('%Y-%m-%d %H:%M:%S', date) DESC")
-                dgNotes.ItemsSource = dtNotes.DefaultView
-            End If
+        '        SQLiteinsertcmd.Parameters.AddWithValue("@MLSListingID", MLSID)
+        '        SQLiteinsertcmd.Parameters.AddWithValue("@Datetime", Date.Now.ToString("yyyy-MM-dd HH:mm:ss"))
+        '        SQLiteinsertcmd.Parameters.AddWithValue("@Emailed", txtAddNotes.Text)
+        '        fxCommon.SQLExecuteCommand(SQLiteinsertcmd)
+        '        'fxCommon.SQLExecuteQuery("insert into Notes values ('" & MLSID & "','" & Date.Now.ToString("yyyy-MM-dd HH:mm:ss") & "','" & txtAddNotes.Text & "')")
+        '        txtAddNotes.Text = String.Empty
+        '        ' Dim dtNotes = fxCommon.SQLExecuteReader("select Date, Notes from Notes where MLSListingID='" & MLSID & "' Order by CONVERT(datetime, Date, 120) Desc")
+        '        Dim dtNotes = fxCommon.SQLExecuteReader("select Date, Notes from Notes where MLSListingID='" & MLSID & "' ORDER BY rowid DESC") ' Order by strftime('%Y-%m-%d %H:%M:%S', date) DESC")
+        '        dgNotes.ItemsSource = dtNotes.DefaultView
+        '    End If
 
-        End If
+        'End If
     End Sub
     Public Sub sendemail(email As Boolean, emailTemplate As String, sTel As String)
         Dim MLSListingID As String = String.Empty
@@ -1460,41 +1460,41 @@ Class MainWindow
     ' Helper function to update the displayed count
     Private Sub UpdateSelectedCount()
         Dim checkedCount As Integer = 0
-        Dim dataView As DataView = TryCast(dgDetails.ItemsSource, DataView)
+        'Dim dataView As DataView = TryCast(dgDetails.ItemsSource, DataView)
 
-        If dataView IsNot Nothing Then
-            checkedCount = dataView.Cast(Of DataRowView)().Count(Function(row)
-                                                                     Return Convert.ToBoolean(row("IsSelected"))
-                                                                 End Function)
-        End If
+        'If dataView IsNot Nothing Then
+        '    checkedCount = dataView.Cast(Of DataRowView)().Count(Function(row)
+        '                                                             Return Convert.ToBoolean(row("IsSelected"))
+        '                                                         End Function)
+        'End If
 
-        lbldgStatus.Content = $"Display/Selected: {dgDetails.Items.Count}/{checkedCount}"
+        'lbldgStatus.Content = $"Display/Selected: {dgDetails.Items.Count}/{checkedCount}"
     End Sub
 
     Private Function GetGridSelectedItems(ColumnName As String, Condition As String) As List(Of String)
         Dim selectedIds As New List(Of String)
 
         ' Safely get the data source from the DataGrid.
-        Dim dataView As DataView = TryCast(dgDetails.ItemsSource, DataView)
+        'Dim dataView As DataView = TryCast(dgDetails.ItemsSource, DataView)
 
-        If dataView IsNot Nothing Then
-            ' Cast the DataView to a generic collection of DataRowView.
-            Dim allRows = dataView.Cast(Of DataRowView)()
-            Dim filteredRows As IEnumerable(Of DataRowView)
+        'If dataView IsNot Nothing Then
+        '    ' Cast the DataView to a generic collection of DataRowView.
+        '    Dim allRows = dataView.Cast(Of DataRowView)()
+        '    Dim filteredRows As IEnumerable(Of DataRowView)
 
-            ' Apply the filter based on the Condition parameter.
-            If Condition = "Checked" Then
-                ' Get only the rows where the IsSelected column is True.
-                filteredRows = allRows.Where(Function(row) Convert.ToBoolean(row("IsSelected")))
-            ElseIf Condition = "All" Then
-                filteredRows = allRows
-            Else
-                Return selectedIds
-            End If
+        '    ' Apply the filter based on the Condition parameter.
+        '    If Condition = "Checked" Then
+        '        ' Get only the rows where the IsSelected column is True.
+        '        filteredRows = allRows.Where(Function(row) Convert.ToBoolean(row("IsSelected")))
+        '    ElseIf Condition = "All" Then
+        '        filteredRows = allRows
+        '    Else
+        '        Return selectedIds
+        '    End If
 
-            ' Select the specified column's value from the filtered rows.
-            selectedIds.AddRange(filteredRows.Select(Function(row) row(ColumnName).ToString()))
-        End If
+        '    ' Select the specified column's value from the filtered rows.
+        '    selectedIds.AddRange(filteredRows.Select(Function(row) row(ColumnName).ToString()))
+        'End If
 
         Return selectedIds
     End Function
@@ -1502,16 +1502,16 @@ Class MainWindow
     ' If you only need the count, UpdateSelectedCount is more direct.
     Private Function GetGridSelectedItemsOnlyChecked(ColumnName As String, Condition As String) As List(Of String)
         Dim selectedIds As New List(Of String)
-        Dim dataView As DataView = TryCast(dgDetails.ItemsSource, DataView)
+        'Dim dataView As DataView = TryCast(dgDetails.ItemsSource, DataView)
 
-        If dataView IsNot Nothing Then
-            Dim checkedRows = dataView.Cast(Of DataRowView)().Where(
-                Function(row)
-                    Return Convert.ToBoolean(row("IsSelected"))
-                End Function)
+        'If dataView IsNot Nothing Then
+        '    Dim checkedRows = dataView.Cast(Of DataRowView)().Where(
+        '        Function(row)
+        '            Return Convert.ToBoolean(row("IsSelected"))
+        '        End Function)
 
-            selectedIds.AddRange(checkedRows.Select(Function(row) row(ColumnName).ToString()))
-        End If
+        '    selectedIds.AddRange(checkedRows.Select(Function(row) row(ColumnName).ToString()))
+        'End If
 
         Return selectedIds
     End Function
@@ -1519,11 +1519,11 @@ Class MainWindow
         Dim rowIndex As Integer = 0
         Dim selectedIds As New List(Of String)
         Dim targetDataGrid As DataGrid
-        If TabControlMain.SelectedItem.Header.ToString() = "Opportunities" Then
-            targetDataGrid = dgDetails
-        Else
-            targetDataGrid = dgDetails
-        End If
+        'If TabControlMain.SelectedItem.Header.ToString() = "Opportunities" Then
+        '    targetDataGrid = dgDetails
+        'Else
+        '    targetDataGrid = dgDetails
+        'End If
 
         For Each item As Object In targetDataGrid.Items
             Dim Row As DataGridRow = DirectCast(targetDataGrid.ItemContainerGenerator.ContainerFromIndex(rowIndex), DataGridRow)
@@ -1578,11 +1578,11 @@ Class MainWindow
     End Sub
     Private Async Sub btnCompGoListingfromPipeDrive_Click(sender As Object, e As RoutedEventArgs)
         Try
-            Dim sHtml As String = Await WebViewPipe.CoreWebView2.ExecuteScriptAsync("document.documentElement.outerHTML")
-            Dim sHtmlDecoded As String = System.Text.RegularExpressions.Regex.Unescape(sHtml)
+            'Dim sHtml As String = Await WebViewPipe.CoreWebView2.ExecuteScriptAsync("document.documentElement.outerHTML")
+            'Dim sHtmlDecoded As String = System.Text.RegularExpressions.Regex.Unescape(sHtml)
             Dim aHTML As New HtmlAgilityPack.HtmlDocument()
             Dim searchAddress As String
-            aHTML.LoadHtml(sHtmlDecoded)
+            'aHTML.LoadHtml(sHtmlDecoded)
 
             ' Find all field rows
             Dim fieldRows As HtmlAgilityPack.HtmlNodeCollection = aHTML.DocumentNode.SelectNodes("//div[@data-testid='fields-list-row']")
@@ -1944,13 +1944,13 @@ Class MainWindow
             ElseIf TabControlMain.SelectedIndex = 2 Or TabControlMain.SelectedIndex = 3 Then
                 validAddress = False
                 Dim selectedIds As New List(Of String)
-                For Each item As Object In dgDetails.Items
-                    If TypeOf item Is System.Data.DataRowView AndAlso Not IsDBNull(item("Select")) Then
-                        If (item("Select")) Then
-                            selectedIds.Add(item("SavedAddress"))
-                        End If
-                    End If
-                Next
+                'For Each item As Object In dgDetails.Items
+                '    If TypeOf item Is System.Data.DataRowView AndAlso Not IsDBNull(item("Select")) Then
+                '        If (item("Select")) Then
+                '            selectedIds.Add(item("SavedAddress"))
+                '        End If
+                '    End If
+                'Next
                 For Each address As String In selectedIds
                     Dim searchUrl As String = "https://www.google.com/search?q=" & Uri.EscapeDataString(address)
 
@@ -2014,9 +2014,9 @@ Class MainWindow
 
         If result = True Then
             Select Case DirectCast(sender, System.Windows.FrameworkElement).Name
-                Case "btnEmailBrowse1" : lblEmailAttach1.Content = openFileDialog.FileName
-                Case "btnEmailBrowse2" : lblEmailAttach2.Content = openFileDialog.FileName
-                Case "btnEmailBrowse3" : lblEmailAttach3.Content = openFileDialog.FileName
+                'Case "btnEmailBrowse1" : lblEmailAttach1.Content = openFileDialog.FileName
+                'Case "btnEmailBrowse2" : lblEmailAttach2.Content = openFileDialog.FileName
+                'Case "btnEmailBrowse3" : lblEmailAttach3.Content = openFileDialog.FileName
             End Select
 
             Dim saveFilePath As String = IO.Path.Combine(AppContext.BaseDirectory, "DB\Attachment\" + openFileDialog.SafeFileName + "")
@@ -2040,34 +2040,34 @@ Class MainWindow
         Next
 
         Dim dtSMS = fxCommon.SQLExecuteReader("Select * from EmailTemplate where Name like '%SMS%'")
-        For Each datarow As DataRow In dtSMS.Rows
-            txtSMSMessage1.Text = datarow("Message").ToString()
-        Next
+        'For Each datarow As DataRow In dtSMS.Rows
+        '    txtSMSMessage1.Text = datarow("Message").ToString()
+        'Next
     End Sub
 
     Private Function FindTextBoxByName(name As String) As System.Windows.Controls.TextBox
         Dim textBox As System.Windows.Controls.TextBox = Nothing
-        Dim gridChildren As IEnumerable(Of UIElement) = LogicalTreeHelper.GetChildren(GridEmail).OfType(Of UIElement)()
+        'Dim gridChildren As IEnumerable(Of UIElement) = LogicalTreeHelper.GetChildren(GridEmail).OfType(Of UIElement)()
 
-        For Each child As UIElement In gridChildren
-            If TypeOf child Is System.Windows.Controls.TextBox AndAlso CType(child, System.Windows.Controls.TextBox).Name = name Then
-                textBox = CType(child, System.Windows.Controls.TextBox)
-                Exit For
-            End If
-        Next
+        'For Each child As UIElement In gridChildren
+        '    If TypeOf child Is System.Windows.Controls.TextBox AndAlso CType(child, System.Windows.Controls.TextBox).Name = name Then
+        '        textBox = CType(child, System.Windows.Controls.TextBox)
+        '        Exit For
+        '    End If
+        'Next
 
         Return textBox
     End Function
     Private Function FindLabelByName(name As String) As System.Windows.Controls.Label
         Dim textBox As System.Windows.Controls.Label = Nothing
-        Dim gridChildren As IEnumerable(Of UIElement) = LogicalTreeHelper.GetChildren(GridEmail).OfType(Of UIElement)()
+        'Dim gridChildren As IEnumerable(Of UIElement) = LogicalTreeHelper.GetChildren(GridEmail).OfType(Of UIElement)()
 
-        For Each child As UIElement In gridChildren
-            If TypeOf child Is System.Windows.Controls.Label AndAlso CType(child, System.Windows.Controls.Label).Name = name Then
-                textBox = CType(child, System.Windows.Controls.Label)
-                Exit For
-            End If
-        Next
+        'For Each child As UIElement In gridChildren
+        '    If TypeOf child Is System.Windows.Controls.Label AndAlso CType(child, System.Windows.Controls.Label).Name = name Then
+        '        textBox = CType(child, System.Windows.Controls.Label)
+        '        Exit For
+        '    End If
+        'Next
 
         Return textBox
     End Function
@@ -2110,7 +2110,7 @@ Class MainWindow
     End Sub
     Sub saveSMSDataToDB()
         Dim Message As String
-        Message = txtSMSMessage1.Text
+        'Message = txtSMSMessage1.Text
         Dim SQLitecmd As New SQLiteCommand("Update EmailTemplate Set Message=@Message where Name = @EmailType")
         SQLitecmd.Parameters.AddWithValue("@Message", Message)
         SQLitecmd.Parameters.AddWithValue("@EmailType", "SMS")
@@ -2222,12 +2222,12 @@ Class MainWindow
         Dim selectedIds As New List(Of String)
         selectedIds = GetGridSelectedItems("MLSListingID", "All")
         MLSListingStatus = String.Join(",", selectedIds.Select(Function(id) $"{id}"))
-        WebViewStatus.Source = New Uri("https://matrix.crmls.org/Matrix/Default.aspx")
+        'WebViewStatus.Source = New Uri("https://matrix.crmls.org/Matrix/Default.aspx")
     End Sub
 
     Private Sub UpdateStatusMLSID(iMlsid As String)
         MLSListingStatus = iMlsid
-        WebViewStatus.Source = New Uri("https://matrix.crmls.org/Matrix/Default.aspx")
+        'WebViewStatus.Source = New Uri("https://matrix.crmls.org/Matrix/Default.aspx")
     End Sub
 
     Private Async Function GetStatusData(CoreWV As CoreWebView2) As Task
@@ -2425,47 +2425,47 @@ Class MainWindow
 
 
     Private Sub btnSMS_Click(sender As Object, e As RoutedEventArgs)
-        If (txtSMS.Text.Trim.Length > 0) Then
-            If dgDetails.SelectedItems.Count > 0 Then
-                'For future reference
-                '<a href="sms:1234567890?body=YourMessageHere">Send SMS</a>
-                'Copy Text
-                If txtSMS IsNot Nothing AndAlso Not String.IsNullOrWhiteSpace(txtSMS.Text) Then
-                    Clipboard.SetText(txtSMS.Text)
-                End If
+        'If (txtSMS.Text.Trim.Length > 0) Then
+        '    If dgDetails.SelectedItems.Count > 0 Then
+        '        'For future reference
+        '        '<a href="sms:1234567890?body=YourMessageHere">Send SMS</a>
+        '        'Copy Text
+        '        If txtSMS IsNot Nothing AndAlso Not String.IsNullOrWhiteSpace(txtSMS.Text) Then
+        '            Clipboard.SetText(txtSMS.Text)
+        '        End If
 
-                'Save to Notes
-                Dim MLSID As String = DirectCast(dgDetails.SelectedItems(0), System.Data.DataRowView).Row.ItemArray(0).ToString()
-                Dim sNotes As String = "SMS: " + txtSMS.Text.Trim()
-                sNotes = System.Text.RegularExpressions.Regex.Replace(sNotes, "\s+", " ")
-                ProcSaveNotes(MLSID, sNotes)
-            End If
-        End If
+        '        'Save to Notes
+        '        Dim MLSID As String = DirectCast(dgDetails.SelectedItems(0), System.Data.DataRowView).Row.ItemArray(0).ToString()
+        '        Dim sNotes As String = "SMS: " + txtSMS.Text.Trim()
+        '        sNotes = System.Text.RegularExpressions.Regex.Replace(sNotes, "\s+", " ")
+        '        ProcSaveNotes(MLSID, sNotes)
+        '    End If
+        'End If
     End Sub
 
     Private Sub btnCopyNumber_Click(sender As Object, e As RoutedEventArgs)
-        If dgDetails.SelectedItems.Count > 0 Then
-            Dim sTel As String = DirectCast(dgDetails.SelectedItems(0), System.Data.DataRowView).Row.ItemArray(5).ToString()
-            sTel = sTel.Replace("-", "").Replace(".", "").Replace(" ", "")
-            Clipboard.SetText(sTel)
-        End If
+        'If dgDetails.SelectedItems.Count > 0 Then
+        '    Dim sTel As String = DirectCast(dgDetails.SelectedItems(0), System.Data.DataRowView).Row.ItemArray(5).ToString()
+        '    sTel = sTel.Replace("-", "").Replace(".", "").Replace(" ", "")
+        '    Clipboard.SetText(sTel)
+        'End If
     End Sub
     Private Sub btnCall_Click(sender As Object, e As RoutedEventArgs)
-        If dgDetails.SelectedItems.Count > 0 Then
-            Dim sTel As String = DirectCast(dgDetails.SelectedItems(0), System.Data.DataRowView).Row.ItemArray(5).ToString()
-            Dim startexternal As New Process()
-            sTel = sTel.Replace("-", "").Replace(".", "").Replace(" ", "")
-            Dim uri As New Uri("tel:" + sTel)
-            Dim psi As New ProcessStartInfo()
-            psi.UseShellExecute = True
-            psi.FileName = uri.AbsoluteUri
-            Process.Start(psi)
+        'If dgDetails.SelectedItems.Count > 0 Then
+        '    Dim sTel As String = DirectCast(dgDetails.SelectedItems(0), System.Data.DataRowView).Row.ItemArray(5).ToString()
+        '    Dim startexternal As New Process()
+        '    sTel = sTel.Replace("-", "").Replace(".", "").Replace(" ", "")
+        '    Dim uri As New Uri("tel:" + sTel)
+        '    Dim psi As New ProcessStartInfo()
+        '    psi.UseShellExecute = True
+        '    psi.FileName = uri.AbsoluteUri
+        '    Process.Start(psi)
 
-            'Save to notes
-            Dim MLSID As String = DirectCast(dgDetails.SelectedItems(0), System.Data.DataRowView).Row.ItemArray(0).ToString()
-            Dim sNotes As String = "Call: " + sTel
-            ProcSaveNotes(MLSID, sNotes)
-        End If
+        '    'Save to notes
+        '    Dim MLSID As String = DirectCast(dgDetails.SelectedItems(0), System.Data.DataRowView).Row.ItemArray(0).ToString()
+        '    Dim sNotes As String = "Call: " + sTel
+        '    ProcSaveNotes(MLSID, sNotes)
+        'End If
     End Sub
 
     Sub ProcSaveNotes(MLSID As String, sNotes As String)
@@ -2476,7 +2476,7 @@ Class MainWindow
         fxCommon.SQLExecuteCommand(SQLiteinsertcmd)
 
         Dim dtNotes = fxCommon.SQLExecuteReader("select Date, Notes from Notes where MLSListingID='" & MLSID & "'  ORDER BY rowid DESC") ' Order by strftime('%Y-%m-%d %H:%M:%S', date) DESC")
-        dgNotes.ItemsSource = dtNotes.DefaultView
+        'dgNotes.ItemsSource = dtNotes.DefaultView
     End Sub
 
     Private Sub rdoAll_Checked(sender As Object, e As RoutedEventArgs)
@@ -2535,14 +2535,14 @@ Class MainWindow
 
     'Pipe
     Private Sub btnPipeBack_Click(sender As Object, e As RoutedEventArgs)
-        If WebViewPipe.CanGoBack Then
-            WebViewPipe.GoBack()
-        End If
+        'If WebViewPipe.CanGoBack Then
+        '    WebViewPipe.GoBack()
+        'End If
     End Sub
     Private Sub btnPipeFwd_Click(sender As Object, e As RoutedEventArgs)
-        If WebViewPipe.CanGoForward Then
-            WebViewPipe.GoForward()
-        End If
+        'If WebViewPipe.CanGoForward Then
+        '    WebViewPipe.GoForward()
+        'End If
     End Sub
     Private Sub btnCompBack_Click(sender As Object, e As RoutedEventArgs)
         If WebViewComp.CanGoBack Then
@@ -2692,7 +2692,7 @@ Class MainWindow
     End Sub
 
     Private Sub btnTabOpportunities_Click(sender As Object, e As RoutedEventArgs)
-        FloatTabItem(tabOpportunities, sender)
+        'FloatTabItem(tabOpportunities, sender)
     End Sub
 
     Private Sub btnTabMain_Click(sender As Object, e As RoutedEventArgs)
@@ -2736,32 +2736,32 @@ Class MainWindow
     End Sub
 
     Private Sub txtSearchOpportunities_TextChanged(sender As Object, e As TextChangedEventArgs)
-        Dim searchText As String = txtSearchOpportunities.Text.Trim().ToLower()
+        'Dim searchText As String = txtSearchOpportunities.Text.Trim().ToLower()
 
         ' Retrieve the original DataTable from the DataGrid's ItemsSource
-        Dim originalDataTable As System.Data.DataTable = TryCast(dgDetails.Tag, System.Data.DataTable)
+        'Dim originalDataTable As System.Data.DataTable = TryCast(dgDetails.Tag, System.Data.DataTable)
 
-        If originalDataTable Is Nothing Then
-            ' Save the original DataTable to the Tag property for restoring later
-            originalDataTable = TryCast(dgDetails.ItemsSource, System.Data.DataView)?.Table
-            If originalDataTable IsNot Nothing Then
-                dgDetails.Tag = originalDataTable
-            End If
-        End If
+        'If originalDataTable Is Nothing Then
+        '    ' Save the original DataTable to the Tag property for restoring later
+        '    originalDataTable = TryCast(dgDetails.ItemsSource, System.Data.DataView)?.Table
+        '    If originalDataTable IsNot Nothing Then
+        '        dgDetails.Tag = originalDataTable
+        '    End If
+        'End If
 
-        If originalDataTable IsNot Nothing Then
-            Dim filteredView As System.Data.DataView = originalDataTable.DefaultView
+        'If originalDataTable IsNot Nothing Then
+        '    Dim filteredView As System.Data.DataView = originalDataTable.DefaultView
 
-            If String.IsNullOrWhiteSpace(searchText) Then
-                ' Clear the RowFilter to show all rows when the search box is cleared
-                filteredView.RowFilter = String.Empty
-            Else
-                ' Apply the filter to show rows matching the search text
-                filteredView.RowFilter = $"SavedAddress LIKE '%{searchText}%' OR Seller LIKE '%{searchText}%'"
-            End If
+        '    If String.IsNullOrWhiteSpace(searchText) Then
+        '        ' Clear the RowFilter to show all rows when the search box is cleared
+        '        filteredView.RowFilter = String.Empty
+        '    Else
+        '        ' Apply the filter to show rows matching the search text
+        '        filteredView.RowFilter = $"SavedAddress LIKE '%{searchText}%' OR Seller LIKE '%{searchText}%'"
+        '    End If
 
-            dgDetails.ItemsSource = filteredView
-        End If
+        '    dgDetails.ItemsSource = filteredView
+        'End If
     End Sub
 
 
@@ -3028,7 +3028,7 @@ Class MainWindow
     End Sub
 
     Private Sub btnpipelogin_Click(sender As Object, e As RoutedEventArgs)
-        WebViewPipe.Source = New Uri("https://app.pipedrive.com/auth/login")
+        'WebViewPipe.Source = New Uri("https://app.pipedrive.com/auth/login")
     End Sub
 
     Private Sub btnToggleSidebar_Click(sender As Object, e As RoutedEventArgs)
@@ -3053,7 +3053,7 @@ Class MainWindow
         TabControlMain.Width = newWindowWidth - iadjust
         WebViewMain.Width = newWindowWidth - iadjust - 10
         WebViewComp.Width = newWindowWidth - iadjust - 10
-        dgDetails.Width = newWindowWidth - iadjust - 50
+        'dgDetails.Width = newWindowWidth - iadjust - 50
     End Sub
     Private Sub LogLayoutInfo(context As String)
         Try
@@ -3066,14 +3066,14 @@ Class MainWindow
             Dim sidebarColumnWidthValue As Double = If(SidebarColumn IsNot Nothing, SidebarColumn.Width.Value, -1)
             Dim rightColumnWidth As Double = If(GridMain IsNot Nothing AndAlso GridMain.ColumnDefinitions.Count > 1, GridMain.ColumnDefinitions(1).ActualWidth, -1)
             Dim tabControlWidth As Double = If(TabControlMain IsNot Nothing, TabControlMain.ActualWidth, -1)
-            Dim detailsGridWidth As Double = If(dgDetails IsNot Nothing, dgDetails.ActualWidth, -1)
+            'Dim detailsGridWidth As Double = If(dgDetails IsNot Nothing, dgDetails.ActualWidth, -1)
 
-            Dim logLine As String = $"{DateTime.Now:yyyy-MM-dd HH:mm:ss} [{context}] " &
-                $"WindowWidth={windowWidth}, WindowHeight={windowHeight}, WindowMaxWidth={windowMaxWidth}, " &
-                $"GridMainWidth={gridMainWidth}, SidebarColumn.ActualWidth={sidebarWidth}, SidebarColumn.Width.Value={sidebarColumnWidthValue}, " &
-                $"RightColumn.ActualWidth={rightColumnWidth}, TabControlMain.ActualWidth={tabControlWidth}, dgDetails.ActualWidth={detailsGridWidth}"
+            'Dim logLine As String = $"{DateTime.Now:yyyy-MM-dd HH:mm:ss} [{context}] " &
+            '    $"WindowWidth={windowWidth}, WindowHeight={windowHeight}, WindowMaxWidth={windowMaxWidth}, " &
+            '    $"GridMainWidth={gridMainWidth}, SidebarColumn.ActualWidth={sidebarWidth}, SidebarColumn.Width.Value={sidebarColumnWidthValue}, " &
+            '    $"RightColumn.ActualWidth={rightColumnWidth}, TabControlMain.ActualWidth={tabControlWidth}, dgDetails.ActualWidth={detailsGridWidth}"
 
-            File.AppendAllText(logPath, logLine & Environment.NewLine)
+            'File.AppendAllText(logPath, logLine & Environment.NewLine)
         Catch ex As System.Exception
             ' Ignore logging errors
         End Try
@@ -3083,7 +3083,7 @@ Class MainWindow
         Await PipedriveGetStageIDsandNames()
         Await PipedriveSyncDealsDataToPropertyTable()
         LoadDataGrid()
-        chkSelectAll.IsChecked = False
+        'chkSelectAll.IsChecked = False
     End Sub
 
     Public Async Function PipedriveGetStageIDsandNames() As Task
@@ -3523,21 +3523,21 @@ Class MainWindow
     End Sub
     Public Sub CheckAllCheckboxes(bCheck As Boolean)
         ' Ensure the DataGrid has an ItemsSource to work with.
-        If Me.dgDetails.ItemsSource IsNot Nothing Then
-            ' Loop through each item in the DataGrid's collection.
-            For Each item As Object In Me.dgDetails.ItemsSource
-                Try
-                    ' This line attempts to set the value using the column indexer
-                    ' of a DataRowView object. This is the correct way for DataTables.
-                    item.Item("IsSelected") = bCheck
-                Catch ex As System.Exception
-                    ' If an exception occurs, it means the item is not a DataRowView or
-                    ' the 'IsSelected' column does not exist. You can add more specific
-                    ' handling here if needed.
-                    System.Diagnostics.Debug.WriteLine($"Failed to set 'IsSelected' for an item: {ex.Message}")
-                End Try
-            Next
-        End If
+        'If Me.dgDetails.ItemsSource IsNot Nothing Then
+        '    ' Loop through each item in the DataGrid's collection.
+        '    For Each item As Object In Me.dgDetails.ItemsSource
+        '        Try
+        '            ' This line attempts to set the value using the column indexer
+        '            ' of a DataRowView object. This is the correct way for DataTables.
+        '            item.Item("IsSelected") = bCheck
+        '        Catch ex As System.Exception
+        '            ' If an exception occurs, it means the item is not a DataRowView or
+        '            ' the 'IsSelected' column does not exist. You can add more specific
+        '            ' handling here if needed.
+        '            System.Diagnostics.Debug.WriteLine($"Failed to set 'IsSelected' for an item: {ex.Message}")
+        '        End Try
+        '    Next
+        'End If
     End Sub
 
 
@@ -3551,16 +3551,16 @@ Class MainWindow
         Dim newLogEntry As String = timestamp & message
         ' Use the Dispatcher to ensure the UI update is done on the main thread.
         ' This prevents "The calling thread cannot access this object" errors.
-        If Me.txtLog.Dispatcher.CheckAccess() Then
-            ' If we are already on the UI thread, update the TextBox directly.
-            ' vbCrLf ensures a new line is added between log entries.
-            Me.txtLog.Text = newLogEntry & vbCrLf & Me.txtLog.Text
-        Else
-            ' If we are on a different thread, use Invoke to update the UI safely.
-            Me.txtLog.Dispatcher.Invoke(Sub()
-                                            Me.txtLog.Text = newLogEntry & vbCrLf & Me.txtLog.Text
-                                        End Sub)
-        End If
+        'If Me.txtLog.Dispatcher.CheckAccess() Then
+        '    ' If we are already on the UI thread, update the TextBox directly.
+        '    ' vbCrLf ensures a new line is added between log entries.
+        '    Me.txtLog.Text = newLogEntry & vbCrLf & Me.txtLog.Text
+        'Else
+        '    ' If we are on a different thread, use Invoke to update the UI safely.
+        '    Me.txtLog.Dispatcher.Invoke(Sub()
+        '                                    Me.txtLog.Text = newLogEntry & vbCrLf & Me.txtLog.Text
+        '                                End Sub)
+        'End If
     End Sub
 End Class
 
