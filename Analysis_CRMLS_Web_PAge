@@ -1,0 +1,53 @@
+<input type="text" class="textbox" id="Fm2_Ctrl2012_TB" name="Fm2_Ctrl2012_TB" onkeypress="return SearchJs.onTextBoxKeyPress(event, this,SearchJs.isNumericKeyCode);" onpaste="return SearchJs.onTextBoxPaste(event, this,SearchJs.isNumericKeyCode);" onkeyup="SearchJs.setBackgroundColor(this, SearchJs.checkTextBox);" onchange="SearchJs.setBackgroundColor(this, SearchJs.checkTextBox);" data-mtx-track="Living Area" data-mtx-track-prop-type="NumericTextBox" data-mtx-track-prop-id="2012" maxlength="500" style="width:85px;background-color:#ffffff;" value="" title="The living area of the property, in square feet or square meters.  See the Living Area Units field to determine if this is Square Feet or Meters.  The default is Square Feet.">
+
+
+
+<input type="text" class="textbox" id="Fm2_Ctrl2012_TB" name="Fm2_Ctrl2012_TB" onkeypress="return SearchJs.onTextBoxKeyPress(event, this,SearchJs.isNumericKeyCode);" onpaste="return SearchJs.onTextBoxPaste(event, this,SearchJs.isNumericKeyCode);" onkeyup="SearchJs.setBackgroundColor(this, SearchJs.checkTextBox);" onchange="SearchJs.setBackgroundColor(this, SearchJs.checkTextBox);" data-mtx-track="Living Area" data-mtx-track-prop-type="NumericTextBox" data-mtx-track-prop-id="2012" maxlength="500" style="width:85px;background-color:#ffffff;" value="" title="The living area of the property, in square feet or square meters.  See the Living Area Units field to determine if this is Square Feet or Meters.  The default is Square Feet.">
+
+
+
+<input type="text" id="Fm2_Ctrl12_TB" name="Fm2_Ctrl12_TB" class="textbox tbxMapSearch" onkeypress="return SearchJs.onTextBoxKeyPress(event, this);" onpaste="return SearchJs.onTextBoxPaste(event, this);" onkeyup="SearchJs.setBackgroundColor(this, SearchJs.checkTextBox);" onchange="SearchJs.setBackgroundColor(this, SearchJs.checkTextBox);" maxlength="40" style="background-color:#ffffff;" onfocus="return MapSearchJs.onTextboxFocus.call(this, event);" onblur="return MapSearchJs.geocode();" data-bbox="32.1369187760465,-124.8046875,42.4545894527588,-113.7744140625" data-re="^[a-zA-Z]{1,2}\d{5,9}|\d{7,9}" data-creds="AtmMylOwdOQG4NWGfiM7G1EsIkDI42JQuufWW9tF9PE8gKv2A77HyRzj4xEGEfqP" value="" title="Enter an MLS# or address as a center point.">
+
+
+
+
+List Price
+<td class="d14m14"><span class="formula label field d14m15">LIST PRICE: </span><span class="label heading2 d14m8">&nbsp; </span><span class="formula wrapped-field field d14m13">$699,999 </span></td>
+
+
+<td class="d14m93"><span class="label heading2 d14m12">LIST PRICE:</span><span class="label d14m8">&nbsp; </span><span class="wrapped-field d14m36">$829,000</span></td>
+
+
+Close Price
+<td class="d14m93"><span class="label heading2 d14m12">CLOSE PRICE:</span><span class="label d14m8">&nbsp; </span><span class="field formula d14m49">$855,000</span></td>
+
+
+
+
+WebView_DOMContentLoaded
+WebViewStatus_DOMContentLoaded
+    Private Async Sub WebViewStatus_DOMContentLoaded(sender As Object, e As CoreWebView2DOMContentLoadedEventArgs)
+        Dim CoreWV As Microsoft.Web.WebView2.Core.CoreWebView2 = sender
+        Dim url As String = CoreWV.Source.ToString().ToLower()
+        If url.Contains("https://signin.crmls.org/account/login") Then
+            SiteLogin(CoreWV)
+            bCodeProcessing = True
+        ElseIf url.Contains("https://matrix.crmls.org/matrix/default.aspx") AndAlso MLSListingStatus IsNot String.Empty Then
+            Await CoreWV.ExecuteScriptAsync("document.getElementById('ctl02_m_ucSpeedBar_m_tbSpeedBar').value = '" & MLSListingStatus & "';")
+            Threading.Thread.Sleep(200)
+            Await CoreWV.ExecuteScriptAsync("document.getElementById('ctl02_m_ucSpeedBar_m_lnkGo').click();")
+            Threading.Thread.Sleep(200)
+        ElseIf url.Contains("https://matrix.crmls.org/matrix/results.aspx") AndAlso MLSListingStatus IsNot String.Empty Then
+            Await GetStatusData(CoreWV)
+        ElseIf url.Contains("https://app.privy.pro/users/sign_in") Then
+            'privy
+            privylogin(CoreWV)
+        End If
+    End Sub
+
+
+
+        WebViewStatus.Source = New Uri("https://matrix.crmls.org/Matrix/Default.aspx")
+        Dim selectedIds As New List(Of String)
+        selectedIds = GetGridSelectedItems("MLSListingID", "All")
+        MLSListingStatus = String.Join(",", selectedIds.Select(Function(id) $"{id}"))

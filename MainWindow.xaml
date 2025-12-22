@@ -1,0 +1,887 @@
+﻿<Window   x:Class="MainWindow"
+          xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+          xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+          xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+          xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+          xmlns:Wpf="clr-namespace:Microsoft.Web.WebView2.Wpf;assembly=Microsoft.Web.WebView2.Wpf"
+          mc:Ignorable="d"
+        Title="MainWindow" Height="1100"  Loaded="Window_Loaded" SizeChanged="Window_SizeChanged"     
+        KeyDown="Window_KeyDown" 
+        Focusable="True">
+
+    <Window.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="Dictionary.xaml" />
+            </ResourceDictionary.MergedDictionaries>
+
+            <Style x:Key="TabItemHeaderStyle" TargetType="{x:Type TabItem}">
+                <Setter Property="HeaderTemplate">
+                    <Setter.Value>
+                        <DataTemplate>
+                            <TextBlock Text="{Binding}" FontWeight="Bold" />
+                        </DataTemplate>
+                    </Setter.Value>
+                </Setter>
+                <Setter Property="Background" Value="LightBlue" />
+                <!-- Set your desired background color -->
+                <!-- Add more setters as needed -->
+            </Style>
+
+            <!-- DataGrid Style -->
+            <Style TargetType="DataGrid">
+                <Setter Property="Background" Value="#FFF"/>
+                <Setter Property="Foreground" Value="#000"/>
+                <Setter Property="BorderBrush" Value="#DDD"/>
+                <Setter Property="RowBackground" Value="#FFF"/>
+                <Setter Property="AlternatingRowBackground" Value="#F7F7F7"/>
+                <Setter Property="HorizontalGridLinesBrush" Value="#EEE"/>
+                <Setter Property="VerticalGridLinesBrush" Value="#EEE"/>
+                <Setter Property="FontFamily" Value="Segoe UI"/>
+                <Setter Property="FontSize" Value="12"/>
+                <Setter Property="SelectionMode" Value="Single"/>
+                <Setter Property="CanUserResizeRows" Value="False"/>
+                <Setter Property="AutoGenerateColumns" Value="True"/>
+                <Setter Property="CanUserResizeColumns" Value="True"/>
+            </Style>
+
+            <!-- DataGrid Header Style -->
+            <Style TargetType="{x:Type DataGridColumnHeader}">
+                <Setter Property="Background" Value="#007ACC"/>
+                <Setter Property="Foreground" Value="White"/>
+                <Setter Property="FontSize" Value="12"/>
+                <Setter Property="FontWeight" Value="Bold"/>
+                <Setter Property="Height" Value="25"/>
+                <Setter Property="Padding" Value="5"/>
+            </Style>
+
+            <!-- DataGrid Cell Style -->
+            <Style TargetType="{x:Type DataGridCell}">
+                <Setter Property="Padding" Value="2,2"/>
+                <Setter Property="BorderThickness" Value="0"/>
+                <Style.Triggers>
+                    <Trigger Property="IsSelected" Value="True">
+                        <Setter Property="Background" Value="#CCE8FF"/>
+                        <Setter Property="Foreground" Value="#222"/>
+                    </Trigger>
+                </Style.Triggers>
+            </Style>
+
+            <!-- Button Style -->
+            <Style x:Key="ButtonStyle" TargetType="Button">
+                <Setter Property="Background" Value="#FF007ACC"/>
+                <Setter Property="Foreground" Value="White"/>
+                <Setter Property="BorderBrush" Value="#FF007ACC"/>
+                <Setter Property="BorderThickness" Value="1"/>
+                <Setter Property="Padding" Value="10,3"/>
+                <Setter Property="FontSize" Value="12"/>
+                <Setter Property="Cursor" Value="Hand"/>
+                <Setter Property="Margin" Value="1"/>
+                <Style.Triggers>
+                    <Trigger Property="IsMouseOver" Value="True">
+                        <Setter Property="Background" Value="#FF005F9E"/>
+                    </Trigger>
+                </Style.Triggers>
+            </Style>
+
+            <!-- TextBox Style -->
+            <Style x:Key="TextBoxStyle" TargetType="TextBox">
+                <Setter Property="Margin" Value="5"/>
+                <Setter Property="Padding" Value="2"/>
+                <Setter Property="BorderThickness" Value="1"/>
+                <Setter Property="BorderBrush" Value="Gray"/>
+                <Setter Property="FontSize" Value="12"/>
+            </Style>
+
+            <!-- ComboBox Style -->
+            <Style x:Key="ComboBoxStyle" TargetType="ComboBox">
+                <Setter Property="Margin" Value="5"/>
+                <Setter Property="Padding" Value="2"/>
+                <Setter Property="FontSize" Value="12"/>
+                <Setter Property="Foreground" Value="#333"/>
+                <Setter Property="Background" Value="WhiteSmoke"/>
+                <Setter Property="BorderBrush" Value="Gray"/>
+                <Setter Property="BorderThickness" Value="1"/>
+            </Style>
+        </ResourceDictionary>
+    </Window.Resources>
+
+    <Grid Name="GridMain">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="125" Name="SidebarColumn" />
+            <ColumnDefinition Width="*" Name="RightSidebarColumn" />
+        </Grid.ColumnDefinitions>
+
+        <Grid Grid.Column="0" Background="#F0F0F0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="125" />
+            </Grid.ColumnDefinitions>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="100" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+            </Grid.RowDefinitions>
+
+            <Image Name="imgLogo" Source="/RCB.jpg" Width="125" Height="100" Grid.Row="0" HorizontalAlignment="Center" VerticalAlignment="Top" />
+
+            <Label Content="Offer Price " Width="110" Height="25" Grid.Row="1" HorizontalAlignment="Center" />
+            <TextBox Name="txtPrice" Width="100" Height="20" Grid.Row="2" HorizontalAlignment="Center" PreviewTextInput="txtPrice_PreviewTextInput" LostFocus="txtPrice_LostFocus" Style="{StaticResource TextBoxStyle}" />
+
+            <Label Content="ARV " Width="110" Height="25" Grid.Row="3" HorizontalAlignment="Center" />
+            <TextBox Name="txtARVPrice" Width="100" Height="20" Grid.Row="4" HorizontalAlignment="Center" PreviewTextInput="txtPrice_PreviewTextInput" LostFocus="txtPrice_LostFocus" Style="{StaticResource TextBoxStyle}" />
+
+            <ComboBox Name="cmbEmailTemplate" Width="100" Height="25" Grid.Row="5" HorizontalAlignment="Center" Style="{StaticResource ComboBoxStyle}" />
+            <ComboBox Name="cmbEmailAccount" SelectionChanged="cmbEmailAccount_SelectionChanged"  Width="100" Height="25" Grid.Row="6" HorizontalAlignment="Center" Style="{StaticResource ComboBoxStyle}" />
+
+
+            <Button Name="MainAddToList" Click="MainAddToList_ClickAsync" Content="Add to List" Width="100" Grid.Row="7" HorizontalAlignment="Center" Margin="12,5,13,5" Style="{StaticResource ButtonStyle}" />
+            <Button Name="MainSaveEmail" Click="MainSaveEmail_ClickAsync" Content="Email" Width="100" Grid.Row="8" HorizontalAlignment="Center" Margin="12,5,13,5" Style="{StaticResource ButtonStyle}" />
+            <Button Name="btnCompGoGoogle" Click="btnCompGoGoogle_Click"  Content="Go Google" Width="100" Grid.Row="9" HorizontalAlignment="Center" Margin="12,5,13,5" Style="{StaticResource ButtonStyle}" />
+            <Button Name="btnToggleSidebar" Content="Toggle Sidebar" Width="100" Grid.Row="10" HorizontalAlignment="Center" Margin="12,5,13,5" Style="{StaticResource ButtonStyle}" Click="btnToggleSidebar_Click" VerticalAlignment="Bottom"/>
+            <Button Name="btnExit" Click="btnExit_Click"  Content="Exit" Width="100" Grid.Row="11" HorizontalAlignment="Center" Margin="12,5,13,5" Style="{StaticResource ButtonStyle}" />
+            <!-- Removed unnecessary WrapPanel and its content for brevity -->
+        </Grid>
+
+
+        <Grid  Name="GridTab" Grid.Column="1">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+            <TabControl Name="TabControlMain" Grid.Row="0" Grid.Column="0" 
+                        PreviewMouseDown="TabControlMain_PreviewMouseDown"
+                        SelectionChanged="TabControlMain_SelectionChanged">
+                <TabItem Name="tabMain" Header="Main"  >
+                    <Grid Background="#E5E5E5">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                        </Grid.RowDefinitions>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                            <!--
+                            <ColumnDefinition Width="163.6"/>
+                            <ColumnDefinition Width="41.633"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="148*"/>
+                            <ColumnDefinition Width="148*"/>
+                            <ColumnDefinition Width="949*"/> -->
+                        </Grid.ColumnDefinitions>
+
+                        <!-- Navigation Buttons -->
+                        <Grid HorizontalAlignment="Center" VerticalAlignment="Center" Grid.ColumnSpan="2" >
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <Button Name="btnDgGridGoCompMain" Height="25" Content="Analyze" Click="btnCompGoListingfromMain_Click" Style="{StaticResource ButtonStyle}" Grid.Column="0" Margin="10,5"/>
+                            <Button Name="btnMainBack" Content="&lt;" Click="btnMainBack_Click" Style="{StaticResource ButtonStyle}" Grid.Column="1" Margin="1,5"/>
+                            <Button Name="btnMainFwd" Content="&gt;" Click="btnMainFwd_Click" Style="{StaticResource ButtonStyle}" Grid.Column="2" Margin="3,5"/>
+                            <Button Content="Drag" Name="btnTabMain" Click="btnTabMain_Click" Style="{StaticResource ButtonStyle}"  Grid.Column="3" Margin="3,5" />
+
+                        </Grid>
+
+                        <Grid Grid.Row="1" Margin="5,1,5,1" Grid.ColumnSpan="3">
+                            <!-- Border added to group the settings controls -->
+                            <Border BorderBrush="Gray" BorderThickness="1" CornerRadius="5" Padding="2">
+                                <GroupBox>
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <!-- Define columns for each control group for precise alignment -->
+                                            <ColumnDefinition Width="Auto"/>
+                                            <!-- Enable Autofill CheckBox -->
+                                            <ColumnDefinition Width="Auto"/>
+                                            <!-- Separator -->
+                                            <ColumnDefinition Width="Auto"/>
+                                            <!-- Single Family RadioButton -->
+                                            <ColumnDefinition Width="Auto"/>
+                                            <!-- Condo/TownHouse RadioButton -->
+                                            <ColumnDefinition Width="Auto"/>
+                                            <!-- Separator -->
+                                            <ColumnDefinition Width="Auto"/>
+                                            <!-- Miles Label -->
+                                            <ColumnDefinition Width="Auto"/>
+                                            <!-- Miles TextBox -->
+                                            <ColumnDefinition Width="Auto"/>
+                                            <!-- Separator -->
+                                            <ColumnDefinition Width="Auto"/>
+                                            <!-- SqFt Label -->
+                                            <ColumnDefinition Width="Auto"/>
+                                            <!-- SqFt TextBox -->
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="*"/>
+                                            <!-- Fills remaining space -->
+                                        </Grid.ColumnDefinitions>
+
+                                        <!-- Controls are now placed in specific columns -->
+                                        <CheckBox Grid.Column="0" Name="chkAutoFill0" Content="Enable Autofill" VerticalAlignment="Center" Margin="5" Checked="chkAutoFill0_Checked" Unchecked="chkAutoFill0_Unchecked" />
+                                        <Separator Grid.Column="1" Style="{StaticResource {x:Static ToolBar.SeparatorStyleKey}}" Margin="5,0" />
+                                        <RadioButton Grid.Column="2" Name="rdoFam0" Content="Single Family" GroupName="rdoSubcategory" VerticalAlignment="Bottom" Margin="5,0,5,9" Checked="rdoFam0_Checked" />
+                                        <RadioButton Grid.Column="3" Name="rdoCondo0" Content="Condo/TownHouse" GroupName="rdoSubcategory" VerticalAlignment="Center" Margin="5" Checked="rdoCondo0_Checked" />
+                                        <Separator Grid.Column="4" Style="{StaticResource {x:Static ToolBar.SeparatorStyleKey}}" Margin="5,0" />
+                                        <Label Grid.Column="5" Content="Miles Covered:" VerticalAlignment="Center" Margin="5,0,0,0" />
+                                        <TextBox Grid.Column="6" x:Name="txtRadius0" Width="50" Text="0.25" VerticalAlignment="Center" Style="{StaticResource TextBoxStyle}" TextChanged="txtRadius0_TextChanged" />
+                                        <Separator Grid.Column="7" Style="{StaticResource {x:Static ToolBar.SeparatorStyleKey}}" Margin="5,0" />
+                                        <Label Grid.Column="8" Content="SqFt +/- Range:" VerticalAlignment="Center" Margin="5,0,0,0" />
+                                        <TextBox Grid.Column="9" Name="txtSqFtRange0" Width="60" Text="300" VerticalAlignment="Center" Style="{StaticResource TextBoxStyle}" TextChanged="txtSqFtRange0_TextChanged" />
+                                        <Label Grid.Column="10" Name="lblSqFtRange0" Content="(0-0)" VerticalAlignment="Center" Margin="5,0,0,0" />
+
+                                    </Grid>
+                                </GroupBox>
+                            </Border>
+                        </Grid>
+                        <!-- WebView -->
+                        <Wpf:WebView2 Name="WebViewMain" Grid.Row="2" Grid.ColumnSpan="4" Margin="10,5,10,10"/>
+                    </Grid>
+                </TabItem>
+
+                <TabItem Name="tabAnalyze"  Header="Analyze" >
+                    <Grid Background="#E5E5E5">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="17*"/>
+                            <ColumnDefinition Width="5*"/>
+                            <ColumnDefinition Width="119*"/>
+                            <ColumnDefinition Width="1110*"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                            <!-- Allows the WebView to expand and fill the available space -->
+                        </Grid.RowDefinitions>
+
+                        <!-- Search Controls -->
+                        <Grid Grid.Row="0" Margin="5,5,5,5" Grid.ColumnSpan="5">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="18.5"/>
+                                <ColumnDefinition Width="66"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+
+                            <Label Content="Address ->" Grid.Column="0" VerticalAlignment="Center" Margin="5,0,5,0" Grid.ColumnSpan="2"/>
+                            <TextBox x:Name="txtAddressSearch" Width="Auto" Grid.Column="2" Margin="4,5,4,5" Style="{StaticResource TextBoxStyle}"/>
+
+                            <Button Name="btnAddressSearch" Content="Go" Grid.Column="4" Margin="5,5,5,5" Style="{StaticResource ButtonStyle}" Click="btnAddressSearch_Click"/>
+                            <StackPanel Orientation="Horizontal" Grid.Column="5" Margin="5,0,0,0">
+                                <Button Padding="10,0,10,1" Content="&lt;" Margin="5,5,5,5" Style="{StaticResource ButtonStyle}" Click="btnCompBack_Click"/>
+                                <Button Padding="10,0,10,1" Content="&gt;" Margin="5,5,5,5" Style="{StaticResource ButtonStyle}" Click="btnCompFwd_Click"/>
+                                <Button Content="Drag" Name="btnTabAnalyze" Click="btnTabAnalyze_Click" Style="{StaticResource ButtonStyle}" Margin="3,5" />
+                            </StackPanel>
+                        </Grid>
+
+                        <Grid Grid.Row="1" Margin="5,1,5,1" Grid.ColumnSpan="5">
+                            <!-- Border added to group the settings controls -->
+                            <Border BorderBrush="Gray" BorderThickness="1" CornerRadius="5" Padding="2">
+                                <GroupBox>
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <!-- Define columns for each control group for precise alignment -->
+                                            <ColumnDefinition Width="Auto"/>
+                                            <!-- Enable Autofill CheckBox -->
+                                            <ColumnDefinition Width="Auto"/>
+                                            <!-- Separator -->
+                                            <ColumnDefinition Width="Auto"/>
+                                            <!-- Single Family RadioButton -->
+                                            <ColumnDefinition Width="Auto"/>
+                                            <!-- Condo/TownHouse RadioButton -->
+                                            <ColumnDefinition Width="Auto"/>
+                                            <!-- Separator -->
+                                            <ColumnDefinition Width="Auto"/>
+                                            <!-- Miles Label -->
+                                            <ColumnDefinition Width="Auto"/>
+                                            <!-- Miles TextBox -->
+                                            <ColumnDefinition Width="Auto"/>
+                                            <!-- Separator -->
+                                            <ColumnDefinition Width="Auto"/>
+                                            <!-- SqFt Label -->
+                                            <ColumnDefinition Width="Auto"/>
+                                            <!-- SqFt TextBox -->
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="*"/>
+                                            <!-- Fills remaining space -->
+                                        </Grid.ColumnDefinitions>
+
+                                        <!-- Controls are now placed in specific columns -->
+                                        <CheckBox Grid.Column="0" Name="chkAutoFill" Checked="chkAutoFill_Checked" Unchecked="chkAutoFill_Unchecked" Content="Enable Autofill" VerticalAlignment="Center" Margin="5,0,0,0" Grid.ColumnSpan="2" HorizontalAlignment="Left" Width="97"/>
+
+
+
+                                        <RadioButton Grid.Column="2" Name="rdoFam" Content="Single Family" GroupName="rdoSubcategory" Checked="rdoFam_Checked" VerticalAlignment="Bottom" Margin="5,0,5,9"/>
+                                        <RadioButton Grid.Column="3" Name="rdoCondo" Content="Condo/TownHouse" GroupName="rdoSubcategory" Checked="rdoCondo_Checked" VerticalAlignment="Center" Margin="5"/>
+
+                                        <Separator Grid.Column="4" Style="{StaticResource {x:Static ToolBar.SeparatorStyleKey}}" Margin="5,0"/>
+
+                                        <Label Grid.Column="5" Content="Miles Covered:" VerticalAlignment="Center" Margin="5,0,0,0" />
+                                        <TextBox Grid.Column="6" x:Name="txtRadius" Width="50" Text="0.25" VerticalAlignment="Center" LostFocus="txtRadius_LostFocus" Style="{StaticResource TextBoxStyle}"/>
+
+                                        <Separator Grid.Column="7" Style="{StaticResource {x:Static ToolBar.SeparatorStyleKey}}" Margin="5,0"/>
+
+                                        <Label Grid.Column="8" Content="SqFt +/- Range:" VerticalAlignment="Center" Margin="5,0,0,0" />
+                                        <TextBox Grid.Column="9" Name="txtSqFtRange" Width="60" Text="300" VerticalAlignment="Center" LostFocus="txtSqFtRange_LostFocus" Style="{StaticResource TextBoxStyle}" />
+                                        <Label Grid.Column="10" Name="lblSqFtRange" Content="(0-0)" VerticalAlignment="Center" Margin="5,0,0,0" />
+                                    </Grid>
+                                </GroupBox>
+                            </Border>
+                        </Grid>
+                        <!-- WebView -->
+                        <Wpf:WebView2 x:Name="WebViewComp" Grid.Row="2" Margin="10,10,10,10" Grid.ColumnSpan="5"/>
+                    </Grid>
+                </TabItem>
+
+                <TabItem  Name="tabOpportunities" Header="Opportunities" >
+                    <Grid Background="#E5E5E5">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="130*"/>
+                            <ColumnDefinition Width="248*"/>
+                            <ColumnDefinition Width="378*"/>
+                            <ColumnDefinition Width="169*"/>
+                            <ColumnDefinition Width="169*"/>
+                            <ColumnDefinition Width="169*"/>
+                        </Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="30"/>
+                            <RowDefinition Height="30"/>
+                            <RowDefinition/>
+                            <RowDefinition Height="1.12"/>
+                        </Grid.RowDefinitions>
+
+                        <!-- Action Buttons and Filter Section -->
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Left" Grid.Row="0" Margin="5,5,0,5" Width="840" Grid.ColumnSpan="4">
+                            <!-- Action Buttons -->
+                            <Button Content="Delete" Click="btnDgGridDelete_Click" Style="{StaticResource ButtonStyle}" Margin="5"/>
+                            <Button Content="Go [Analyze]" Click="btnDgGridGoComp_Click" Style="{StaticResource ButtonStyle}" Margin="5"/>
+                            <Button Content="Go Listing [Main]" Click="btnCompGoListing_Click" Style="{StaticResource ButtonStyle}" Margin="5"/>
+                            <Button Content="CRMLs Status" Click="UpdateStatus_Click" Style="{StaticResource ButtonStyle}" Margin="5"/>
+                            <Separator Grid.Column="4" Style="{StaticResource {x:Static ToolBar.SeparatorStyleKey}}" Margin="5,0"/>
+
+                            <Button Content="PipeDrive Download" Click="btnSyncPipeDrive_Click" Style="{StaticResource ButtonStyle}" Margin="5"/>
+                            <Button Content="PipeDrive Upload" Click="btnUpdPipeDrive_Click" Style="{StaticResource ButtonStyle}" Margin="5"/>
+
+                            <!--<Button Content="Appointment" Click="btnAddAppointment_Click" Style="{StaticResource ButtonStyle}" Margin="5"/>
+                            <Button Content="Move To Leads" Click="btnMoveToLeads_Click" Style="{StaticResource ButtonStyle}" Margin="5"/>
+                            <Button Content="Create PDF" Click="EditPDF_Click" Style="{StaticResource ButtonStyle}" Margin="5"/>-->
+                            <Separator Grid.Column="4" Style="{StaticResource {x:Static ToolBar.SeparatorStyleKey}}" Margin="5,0"/>
+                            <Button Content="Export" Click="btnExportLeads_Click" Style="{StaticResource ButtonStyle}" Margin="5"/>
+                            <Button Content="Drag" Name="btnTabOpportunities" Click="btnTabOpportunities_Click" Style="{StaticResource ButtonStyle}" Margin="5"/>
+                        </StackPanel>
+                        <Border Margin="1,0,21,5" Grid.ColumnSpan="3">
+                            <Wpf:WebView2 Name="WebViewStatus" HorizontalAlignment="Left" Width="0" Height="0" Grid.Row="1" Grid.Column="0" />
+                        </Border>
+                        <!-- Status Filter Radio Buttons -->
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Left" Grid.Row="1" Margin="5,1,0,3" Width="750" Grid.ColumnSpan="3">
+                            <RadioButton Name="rdoAll" Content="All" GroupName="rdoMLSStatus" Checked="rdoAll_Checked" Margin="5"/>
+                            <RadioButton Name="rdoActive" Content="Active" GroupName="rdoMLSStatus" Checked="rdoActive_Checked" Margin="5"/>
+                            <RadioButton Name="rdoPending" Content="Pending" GroupName="rdoMLSStatus" Checked="rdoPending_Checked" Margin="5"/>
+                            <RadioButton Name="rdoSold" Content="Sold" GroupName="rdoMLSStatus" Checked="rdoSold_Checked" Margin="5"/>
+                            <RadioButton Name="rdoHold" Content="Hold" GroupName="rdoMLSStatus" Checked="rdoHold_Checked" Margin="5"/>
+                            <RadioButton Name="rdoOth" Content="Other" GroupName="rdoMLSStatus" Checked="rdoOth_Checked" Margin="5"/>
+                            <TextBox Name="txtSearchOpportunities" Margin="18,1,2,5" 
+                                Height="25" Width="350" HorizontalAlignment="Left" ToolTip="Search opportunities..." 
+                                TextChanged="txtSearchOpportunities_TextChanged" Style="{StaticResource TextBoxStyle}" />
+                        </StackPanel>
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Left" Grid.Row="2" Margin="2,1,0,3" Width="750" Grid.ColumnSpan="3" >
+                            <Label  Name="lbldgStatus"  Content="Display/Selected: 0/0" VerticalAlignment="Center"/>
+                            <CheckBox Name="chkSelectAll" Checked="chkSelectAll_Checked" Unchecked="chkSelectAll_Unchecked" Content="Select All"  VerticalAlignment="Center" Margin="15,0,0,0"/>
+                        </StackPanel>
+                        <!-- Details DataGrid -->
+                        <DataGrid Name="dgDetails" 
+                                  AutoGenerateColumns="True" 
+                                  CanUserAddRows="False" 
+                                  SelectionMode="Extended" 
+                                  SelectionChanged="dgDetails_SelectionChanged" 
+                                  AutoGeneratingColumn="OnAutoGeneratingColumn"
+                                  Grid.Row="3" Margin="10,1,15,10" 
+                                  ScrollViewer.HorizontalScrollBarVisibility="Auto" 
+                                  Grid.ColumnSpan="6" RenderTransformOrigin="0.5,0.5">
+                            <DataGrid.RenderTransform>
+                                <TransformGroup>
+                                    <ScaleTransform/>
+                                    <SkewTransform AngleX="0.604"/>
+                                    <RotateTransform Angle="0.218"/>
+                                    <TranslateTransform X="-2.693" Y="0.049"/>
+                                </TransformGroup>
+                            </DataGrid.RenderTransform>
+                            <DataGrid.Columns>
+                                <!-- Predefined Checkbox Column -->
+                                <DataGridTemplateColumn Header="Sel" Width="SizeToCells" IsReadOnly="False">
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <CheckBox IsChecked="{Binding Path=IsSelected, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" HorizontalAlignment="Center" Checked="CheckBox_Checked" Unchecked="CheckBox_Unchecked"/>
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                </DataGridTemplateColumn>
+                            </DataGrid.Columns>
+                            <DataGrid.RowStyle>
+                                <Style TargetType="DataGridRow">
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding Path=Status}" Value="A">
+                                            <Setter Property="Background" Value="Azure" />
+                                        </DataTrigger>
+                                        <DataTrigger Binding="{Binding Path=Status}" Value="U">
+                                            <Setter Property="Background" Value="LightGreen" />
+                                        </DataTrigger>
+
+                                        <DataTrigger Binding="{Binding Path=Status}" Value="X">
+                                            <Setter Property="Background" Value="LightYellow" />
+                                        </DataTrigger>
+                                        <DataTrigger Binding="{Binding Path=Status}" Value="K">
+                                            <Setter Property="Background" Value="LightYellow" />
+                                        </DataTrigger>
+
+                                        <DataTrigger Binding="{Binding Path=Status}" Value="S">
+                                            <Setter Property="Background" Value="LightGray" />
+                                        </DataTrigger>
+
+                                        <DataTrigger Binding="{Binding Path=Status}" Value="P">
+                                            <Setter Property="Background" Value="LightBlue" />
+                                        </DataTrigger>
+                                        <DataTrigger Binding="{Binding Path=Status}" Value="H">
+                                            <Setter Property="Background" Value="LightBlue" />
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </DataGrid.RowStyle>
+                        </DataGrid>
+                        <!-- Notes and Communication Section -->
+                        <Grid Grid.Row="4" Margin="15,5,15,-4" Background="#F0F0F0" Grid.ColumnSpan="6">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="0"/>
+                                <ColumnDefinition Width="0*"/>
+                            </Grid.ColumnDefinitions>
+
+                            <!-- Notes Log -->
+                            <StackPanel Grid.Column="1" Margin="15,0,15,0">
+                                <Label Content="Notes Log" Margin="0,0,0,0"/>
+                                <DataGrid Name="dgNotes" AutoGenerateColumns="False" CanUserAddRows="True" IsReadOnly="False" Height="200" Margin="0,0,0,5">
+                                    <DataGrid.Columns>
+                                        <DataGridTextColumn Header="Date" Binding="{Binding Date}"/>
+                                        <DataGridTemplateColumn Header="Notes">
+                                            <DataGridTemplateColumn.CellTemplate>
+                                                <DataTemplate>
+                                                    <TextBlock Text="{Binding Notes}" TextWrapping="Wrap"/>
+                                                </DataTemplate>
+                                            </DataGridTemplateColumn.CellTemplate>
+                                        </DataGridTemplateColumn>
+                                    </DataGrid.Columns>
+                                </DataGrid>
+                                <Label Content="Last Action Status:" Margin="0,10,0,0" Width="40"/>
+                                <TextBox Name="txtStatus" TextWrapping="Wrap" AcceptsReturn="True" Height="100" Margin="0,0,0,5" Width="40"/>
+
+                            </StackPanel>
+
+                            <!-- SMS and Call -->
+                            <StackPanel Grid.Column="0" Margin="5">
+                                <Label Content="Add Notes" Margin="0,0,0,0"/>
+                                <TextBox Name="txtAddNotes" TextWrapping="Wrap" AcceptsReturn="True" Height="100" Margin="0,0,0,5"/>
+                                <Button Content="Save" Click="SaveNotes_Click" Style="{StaticResource ButtonStyle}" Margin="5"/>
+                                <Label Content="Phone: Call or SMS" Margin="0,15,0,5"/>
+                                <TextBox Name="txtSMS" Height="100" TextWrapping="WrapWithOverflow" AcceptsReturn="True" Margin="0,0,0,5"/>
+                                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,5">
+                                    <Button Content="Copy Text" Click="btnSMS_Click" Style="{StaticResource ButtonStyle}" Margin="5"/>
+                                    <Button Content="Copy Ph#" Click="btnCopyNumber_Click" Style="{StaticResource ButtonStyle}" Margin="5"/>
+                                    <Button Content="Call" Click="btnCall_Click" Style="{StaticResource ButtonStyle}" Margin="5"/>
+                                </StackPanel>
+                            </StackPanel>
+                        </Grid>
+                    </Grid>
+                </TabItem>
+
+                <TabItem  Name="tabPipedrive" Header="Pipedrive">
+                    <Grid Background="#E5E5E5">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                        </Grid.RowDefinitions>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="138*"/>
+                            <ColumnDefinition Width="11*"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+
+                        <!-- Navigation Buttons -->
+                        <Grid HorizontalAlignment="Center" VerticalAlignment="Center" >
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="30.76"/>
+                                <ColumnDefinition Width="53.76"/>
+                            </Grid.ColumnDefinitions>
+                            <Button Name="btnpipelogin" Content="Login" Click="btnpipelogin_Click" Style="{StaticResource ButtonStyle}" Grid.Column="0" Margin="10,5,1,5" />
+                            <Button Name="btnCompGoListingfromPipeDrive" Content="Analyze" Click="btnCompGoListingfromPipeDrive_Click" Style="{StaticResource ButtonStyle}" Grid.Column="1" Margin="10,5,10,0" Height="24" VerticalAlignment="Top" />
+                            <Button Name="btnPipeBack" Content="&lt;" Click="btnPipeBack_Click" Style="{StaticResource ButtonStyle}" Grid.Column="2" Margin="1,5,1,5"/>
+                            <Button Name="btnPipeFwd" Content="&gt;" Click="btnPipeFwd_Click" Style="{StaticResource ButtonStyle}" Grid.Column="3" Margin="3,5,21,5"/>
+                            <!--<Button Content="Drag" Name="btnTabPrivy" Click="btnTabPrivy_Click" Style="{StaticResource ButtonStyle}"  Grid.Column="2" Margin="44,5,-37,5" />-->
+
+                        </Grid>
+                        <!-- WebView -->
+                        <Wpf:WebView2 Name="WebViewPipe" Grid.Row="1" Grid.ColumnSpan="4" Margin="10,5,10,10"/>
+                    </Grid>
+                </TabItem>
+                <TabItem  Name="tabOG" Header="OfferGun">
+                    <Grid Background="#E5E5E5">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                        </Grid.RowDefinitions>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="138*"/>
+                            <ColumnDefinition Width="11*"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+
+                        <!-- Navigation Buttons -->
+                        <Grid HorizontalAlignment="Center" VerticalAlignment="Center" >
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="30.76"/>
+                                <ColumnDefinition Width="53.76"/>
+                            </Grid.ColumnDefinitions>
+                        </Grid>
+                        <!-- WebView -->
+                        <Wpf:WebView2 Name="WebViewog" Grid.Row="1" Grid.ColumnSpan="4" Margin="10,5,10,10"/>
+                    </Grid>
+                </TabItem>
+
+                <TabItem  Name="tabOG2" Header="OGMails">
+                    <Grid Background="#E5E5E5">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                        </Grid.RowDefinitions>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="138*"/>
+                            <ColumnDefinition Width="11*"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+
+                        <!-- Navigation Buttons -->
+                        <Grid HorizontalAlignment="Center" VerticalAlignment="Center" >
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="30.76"/>
+                                <ColumnDefinition Width="53.76"/>
+                            </Grid.ColumnDefinitions>
+                        </Grid>
+                        <!-- WebView -->
+                        <Wpf:WebView2 Name="WebViewog2" Grid.Row="1" Grid.ColumnSpan="4" Margin="10,5,10,10"/>
+                    </Grid>
+                </TabItem>
+
+                <TabItem  Name="tabPrivy" Header="Privy"  >
+                    <Grid Background="#E5E5E5">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                        </Grid.RowDefinitions>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="148*"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+
+                        <!-- Navigation Buttons -->
+                        <Grid Grid.Row="0" HorizontalAlignment="Center" VerticalAlignment="Center" >
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="53.76"/>
+                            </Grid.ColumnDefinitions>
+                            <Button Name="btnCompGoListingfromPrivy" Content="Analyze" Click="btnCompGoListingfromPrivy_Click" Style="{StaticResource ButtonStyle}" Grid.Column="0" Margin="10,5,10,5" />
+                            <Button Name="btnPrivyBack" Content="&lt;" Click="btnPrivyBack_Click" Style="{StaticResource ButtonStyle}" Grid.Column="1" Margin="1,5,1,5"/>
+                            <Button Name="btnPrivyFwdprivy" Content="&gt;" Click="btnPrivyFwd_Click" Style="{StaticResource ButtonStyle}" Grid.Column="2" Margin="3,5,21,5"/>
+                            <!--<Button Content="Drag" Name="btnTabPrivy" Click="btnTabPrivy_Click" Style="{StaticResource ButtonStyle}"  Grid.Column="2" Margin="44,5,-37,5" />-->
+
+                        </Grid>
+                        <!-- WebView -->
+                        <Wpf:WebView2 Name="WebViewPrivy" Grid.Row="1" Grid.ColumnSpan="3" Margin="10,5,10,10"/>
+                    </Grid>
+                </TabItem>
+
+                <!-- Add this TabItem to your existing TabControl in MainWindow.xaml -->
+                <TabItem Name="tabSettings" Header="Settings" GotFocus="tabSettings_GotFocus">
+                    <Grid Background="#F0F0F0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="371*"/>
+                            <ColumnDefinition Width="556*"/>
+                        </Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="*" />
+                        </Grid.RowDefinitions>
+
+                        <!-- Save Button - Moved to the top -->
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Left" Grid.Row="0" Margin="5,5,0,5" Width="840" Grid.ColumnSpan="2">
+                            <Button Name="btnSaveSettings" Grid.Row="0" HorizontalAlignment="Left" Margin="15,15,0,5" Padding="5" Content="Save Settings" Click="btnSaveSettings_Click" Style="{StaticResource ButtonStyle}" />
+                            <Button Name="btnSyncPipeDrive" Grid.Row="0" HorizontalAlignment="Left" Margin="15,15,0,5" Padding="5" Content="PipeDrive Download" Click="btnSyncPipeDrive_Click" Style="{StaticResource ButtonStyle}" />
+                            <Button Name="btnLinkEmails" Grid.Row="0" HorizontalAlignment="Left" Margin="15,15,0,5" Padding="5" Content="Link Emails" Click="btnLinkEmails_Click" Style="{StaticResource ButtonStyle}" />
+                        </StackPanel>
+                        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" Grid.ColumnSpan="2">
+                            <!-- Main Grid for two-column layout -->
+                            <Grid Margin="15">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+
+                                <!-- LEFT COLUMN -->
+                                <StackPanel Grid.Column="0" Margin="0,0,10,0">
+                                    <!-- CRMLS Credentials -->
+                                    <GroupBox Header="CRMLS Credentials" FontWeight="Bold" Margin="0,5">
+                                        <Grid Margin="10">
+                                            <Grid.RowDefinitions>
+                                                <RowDefinition Height="Auto" />
+                                                <RowDefinition Height="Auto" />
+                                            </Grid.RowDefinitions>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="120" />
+                                                <ColumnDefinition Width="*" />
+                                            </Grid.ColumnDefinitions>
+                                            <Label Grid.Row="0" Grid.Column="0" Content="Username:" VerticalAlignment="Center"/>
+                                            <TextBox Name="txtCrmlsUser" Grid.Row="0" Grid.Column="1" Margin="5" VerticalAlignment="Center" Width="250" HorizontalAlignment="Left"/>
+                                            <Label Grid.Row="1" Grid.Column="0" Content="Password:" VerticalAlignment="Center"/>
+                                            <TextBox Name="txtCrmlsPassword" Grid.Row="1" Grid.Column="1" Margin="5" VerticalAlignment="Center" Width="250" HorizontalAlignment="Left"/>
+                                        </Grid>
+                                    </GroupBox>
+
+                                    <!-- PRIVY Credentials -->
+                                    <GroupBox Header="PRIVY Credentials" FontWeight="Bold" Margin="0,5">
+                                        <Grid Margin="10">
+                                            <Grid.RowDefinitions>
+                                                <RowDefinition Height="Auto" />
+                                                <RowDefinition Height="Auto" />
+                                            </Grid.RowDefinitions>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="120" />
+                                                <ColumnDefinition Width="*" />
+                                            </Grid.ColumnDefinitions>
+                                            <Label Grid.Row="0" Grid.Column="0" Content="Username:" VerticalAlignment="Center"/>
+                                            <TextBox Name="txtPrivyUser" Grid.Row="0" Grid.Column="1" Margin="5" VerticalAlignment="Center" Width="250" HorizontalAlignment="Left"/>
+                                            <Label Grid.Row="1" Grid.Column="0" Content="Password:" VerticalAlignment="Center"/>
+                                            <TextBox Name="txtPrivyPassword" Grid.Row="1" Grid.Column="1" Margin="5" VerticalAlignment="Center" Width="250" HorizontalAlignment="Left"/>
+                                        </Grid>
+                                    </GroupBox>
+
+                                    <!-- PIPE Credentials -->
+                                    <GroupBox Header="PIPE Credentials" FontWeight="Bold" Margin="0,5">
+                                        <Grid Margin="10">
+                                            <Grid.RowDefinitions>
+                                                <RowDefinition Height="Auto" />
+                                                <RowDefinition Height="Auto" />
+                                                <RowDefinition Height="Auto" />
+                                                <RowDefinition Height="Auto" />
+                                            </Grid.RowDefinitions>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="120" />
+                                                <ColumnDefinition Width="*" />
+                                            </Grid.ColumnDefinitions>
+                                            <Label Grid.Row="0" Grid.Column="0" Content="Username:" VerticalAlignment="Center"/>
+                                            <TextBox Name="txtPipeUser" Grid.Row="0" Grid.Column="1" Margin="5" VerticalAlignment="Center" Width="250" HorizontalAlignment="Left"/>
+                                            <Label Grid.Row="1" Grid.Column="0" Content="Password:" VerticalAlignment="Center"/>
+                                            <TextBox Name="txtPipePassword" Grid.Row="1" Grid.Column="1" Margin="5" VerticalAlignment="Center" Width="250" HorizontalAlignment="Left"/>
+                                            <Label Grid.Row="2" Grid.Column="0" Content="API Key:" VerticalAlignment="Center"/>
+                                            <TextBox Name="txtPipeApiKey" Grid.Row="2" Grid.Column="1" Margin="5" VerticalAlignment="Center" Width="250" HorizontalAlignment="Left"/>
+                                            <Label Grid.Row="3" Grid.Column="0" Content="Company Name:" VerticalAlignment="Center"/>
+                                            <TextBox Name="txtPipeCompanyName" Grid.Row="3" Grid.Column="1" Margin="5" VerticalAlignment="Center" Width="250" HorizontalAlignment="Left"/>
+                                        </Grid>
+                                    </GroupBox>
+                                </StackPanel>
+
+                                <!-- RIGHT COLUMN -->
+                                <StackPanel Grid.Column="1" Margin="10,0,0,0">
+                                    <!-- MLS Status -->
+                                    <GroupBox Header="MLS Status Keywords (comma-separated)" FontWeight="Bold" Margin="0,5">
+                                        <Grid Margin="10">
+                                            <Grid.RowDefinitions>
+                                                <RowDefinition Height="Auto" />
+                                                <RowDefinition Height="Auto" />
+                                                <RowDefinition Height="Auto" />
+                                                <RowDefinition Height="Auto" />
+                                                <RowDefinition Height="Auto" />
+                                            </Grid.RowDefinitions>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="120" />
+                                                <ColumnDefinition Width="*" />
+                                            </Grid.ColumnDefinitions>
+                                            <Label Grid.Row="0" Grid.Column="0" Content="Active:" VerticalAlignment="Center"/>
+                                            <TextBox Name="txtMlsActive" Grid.Row="0" Grid.Column="1" Margin="5" VerticalAlignment="Center" Width="250" HorizontalAlignment="Left"/>
+                                            <Label Grid.Row="1" Grid.Column="0" Content="Sold:" VerticalAlignment="Center"/>
+                                            <TextBox Name="txtMlsSold" Grid.Row="1" Grid.Column="1" Margin="5" VerticalAlignment="Center" Width="250" HorizontalAlignment="Left"/>
+                                            <Label Grid.Row="2" Grid.Column="0" Content="Hold:" VerticalAlignment="Center"/>
+                                            <TextBox Name="txtMlsHold" Grid.Row="2" Grid.Column="1" Margin="5" VerticalAlignment="Center" Width="250" HorizontalAlignment="Left"/>
+                                            <Label Grid.Row="3" Grid.Column="0" Content="Pending:" VerticalAlignment="Center"/>
+                                            <TextBox Name="txtMlsPending" Grid.Row="3" Grid.Column="1" Margin="5" VerticalAlignment="Center" Width="250" HorizontalAlignment="Left"/>
+                                            <Label Grid.Row="4" Grid.Column="0" Content="Other:" VerticalAlignment="Center"/>
+                                            <TextBox Name="txtMlsOther" Grid.Row="4" Grid.Column="1" Margin="5" VerticalAlignment="Center" Width="250" HorizontalAlignment="Left"/>
+                                        </Grid>
+                                    </GroupBox>
+
+                                    <!-- MLS Settings -->
+                                    <GroupBox Header="MLS Search Settings" FontWeight="Bold" Margin="0,5">
+                                        <Grid Margin="10">
+                                            <Grid.RowDefinitions>
+                                                <RowDefinition Height="Auto" />
+                                                <RowDefinition Height="Auto" />
+                                                <RowDefinition Height="Auto" />
+                                            </Grid.RowDefinitions>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="120" />
+                                                <ColumnDefinition Width="*" />
+                                            </Grid.ColumnDefinitions>
+                                            <Label Grid.Row="0" Grid.Column="0" Content="Miles:" VerticalAlignment="Center"/>
+                                            <TextBox Name="txtMlsMiles" Grid.Row="0" Grid.Column="1" Margin="5" VerticalAlignment="Center" Width="250" HorizontalAlignment="Left"/>
+                                            <Label Grid.Row="1" Grid.Column="0" Content="Subcat:" VerticalAlignment="Center"/>
+                                            <TextBox Name="txtMlsSubcat" Grid.Row="1" Grid.Column="1" Margin="5" VerticalAlignment="Center" Width="250" HorizontalAlignment="Left"/>
+                                            <Label Grid.Row="2" Grid.Column="0" Content="Sqft:" VerticalAlignment="Center"/>
+                                            <TextBox Name="txtMlsSqft" Grid.Row="2" Grid.Column="1" Margin="5" VerticalAlignment="Center" Width="250" HorizontalAlignment="Left"/>
+                                        </Grid>
+                                    </GroupBox>
+
+                                    <!-- General Settings -->
+                                    <GroupBox Header="General Settings" FontWeight="Bold" Margin="0,5">
+                                        <Grid Margin="10">
+                                            <Grid.RowDefinitions>
+                                                <RowDefinition Height="Auto" />
+                                                <RowDefinition Height="Auto" />
+                                                <RowDefinition Height="Auto" />
+                                            </Grid.RowDefinitions>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="120" />
+                                                <ColumnDefinition Width="*" />
+                                            </Grid.ColumnDefinitions>
+                                            <CheckBox Grid.Column="1" Grid.Row="0" Name="chkAutoStatusChangeEmails" Checked="chkAutoStatusChangeEmails_Checked" Unchecked="chkAutoFill_Unchecked" Content="Enable Automatic 'Status Change' Email Triggers" Margin="5,0,15,10" Height="15" VerticalAlignment="Top"/>
+                                            <Label Grid.Row="1" Grid.Column="0" Content="Default Email:" VerticalAlignment="Center"/>
+                                            <TextBox Name="txtDefaultEmail" Grid.Row="1" Grid.Column="1" Margin="5" VerticalAlignment="Center" Width="250" HorizontalAlignment="Left"/>
+
+                                        </Grid>
+                                    </GroupBox>
+                                </StackPanel>
+                            </Grid>
+                        </ScrollViewer>
+                    </Grid>
+                </TabItem>
+
+                <TabItem Header="Email" Margin="-2,0,-2,0">
+                    <Grid Name="GridEmail" Background="#FFE5E5E5">
+                        <Grid.ColumnDefinitions>
+                            <!-- Adjusted column widths -->
+                            <ColumnDefinition Width="85"/>
+                            <ColumnDefinition Width="20"/>
+                            <ColumnDefinition Width="35.2"/>
+                            <ColumnDefinition Width="303.8"/>
+                            <ColumnDefinition Width="357"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="40"/>
+                            <RowDefinition Height="40"/>
+                            <RowDefinition Height="40"/>
+                            <RowDefinition Height="58"/>
+                            <RowDefinition Height="45"/>
+                            <RowDefinition Height="325"/>
+                            <RowDefinition Height="152"/>
+                            <RowDefinition Height="413"/>
+                        </Grid.RowDefinitions>
+
+                        <!-- Email Type Radio Buttons -->
+                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Grid.Column="1" Visibility="Visible" Grid.ColumnSpan="3" Height="14">
+                            <RadioButton Name="rdoMessage" GroupName="rdoEmailType" Checked="rdoEmailType_Checked" Margin="20,0,25,0">Message</RadioButton>
+                            <RadioButton Name="rdoCollaboration" GroupName="rdoEmailType" Checked="rdoEmailType_Checked"  Margin="2,0,25,0">Offers</RadioButton>
+                            <RadioButton Name="rdoStatusUpdate" GroupName="rdoEmailType" Checked="rdoEmailType_Checked">AutoUpdates</RadioButton>
+                        </StackPanel>
+
+                        <!-- Labels for Messages -->
+                        <Label Name="lblMessage1" Grid.Row="1" Grid.Column="3" Margin="65,5,100,5"/>
+                        <Label Name="lblMessage2" Grid.Row="1" Grid.Column="4" Margin="100,5,100,5"/>
+                        <Label Name="lblMessage3" Grid.Row="1" Grid.Column="5" Margin="100,5,100,5"/>
+
+                        <!-- Subject Labels and TextBoxes -->
+                        <Label Name="lblSubject0" Content="Subject" Width="100" Height="30" Grid.Row="2" Grid.Column="0" HorizontalAlignment="Left" VerticalAlignment="Top" Grid.ColumnSpan="2"/>
+                        <TextBox Name="txtEmailSubject1" Width="300" Height="20" HorizontalAlignment="Left" VerticalAlignment="Top" Grid.Row="2" Grid.Column="2" Grid.ColumnSpan="2"/>
+                        <TextBox Name="txtEmailSubject2" Width="300" Height="20" HorizontalAlignment="Left" VerticalAlignment="Top" Grid.Row="2" Grid.Column="4"/>
+                        <TextBox Name="txtEmailSubject3" Width="300" Height="20" HorizontalAlignment="Left" VerticalAlignment="Top" Grid.Row="2" Grid.Column="5"/>
+
+                        <!-- Attachment Labels and Browse Buttons -->
+                        <Label Name="lblEmailAttach" Content="Attachment" Width="100" Height="30" Grid.Row="3" Grid.Column="0" HorizontalAlignment="Left" VerticalAlignment="Top" Grid.ColumnSpan="2"/>
+                        <Label Name="lblEmailAttach1" Content="Attachment1" Width="320" Height="48" Grid.Row="3" Grid.Column="2" HorizontalAlignment="Left" VerticalAlignment="Top" Grid.ColumnSpan="2"/>
+                        <StackPanel Height="35" Orientation="Horizontal" VerticalAlignment="Center" Grid.Row="4" Grid.Column="2" Grid.ColumnSpan="2">
+                            <Button Name="btnEmailBrowse1" Style="{StaticResource ButtonStyle}" Click="btnEmailBrowse1_Click" Content="Browse" Width="80" Height="25" HorizontalAlignment="Right" VerticalAlignment="center"/>
+                        </StackPanel>
+                        <Label Name="lblEmailAttach2" Content="Attachment2" Width="320" Height="48" HorizontalAlignment="Left" VerticalAlignment="Top" Grid.Row="3" Grid.Column="4"/>
+                        <StackPanel Height="35" Orientation="Horizontal" HorizontalAlignment="Left" VerticalAlignment="Center" Grid.Row="4" Grid.Column="4">
+                            <Button x:Name="btnEmailBrowse2" Style="{StaticResource ButtonStyle}" Content="Browse" Click="btnEmailBrowse1_Click" Width="80" Height="25"/>
+                        </StackPanel>
+                        <Label Name="lblEmailAttach3" Content="Attachment3" Width="320" Height="48" HorizontalAlignment="Left" VerticalAlignment="Top" Grid.Row="3" Grid.Column="5"/>
+                        <StackPanel Height="35" Orientation="Horizontal" HorizontalAlignment="Left" VerticalAlignment="Center" Grid.Row="4" Grid.Column="5">
+                            <Button x:Name="btnEmailBrowse3" Style="{StaticResource ButtonStyle}" Content="Browse" Click="btnEmailBrowse1_Click" Width="80" Height="25"/>
+                        </StackPanel>
+
+                        <!-- Email Message TextBoxes -->
+                        <Label Name="lblEmailMessage" Content="Message" Width="200" Height="30" Grid.Row="5" Grid.Column="0" HorizontalAlignment="Left" VerticalAlignment="Top" Grid.ColumnSpan="4"/>
+                        <TextBox Name="txtEmailMessage1" Width="300" Height="300" HorizontalAlignment="Left" VerticalAlignment="Center" Grid.Row="5" Grid.Column="2"
+ AcceptsReturn="True" TextWrapping="Wrap" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto" Grid.ColumnSpan="2"/>
+                        <TextBox Name="txtEmailMessage2" Width="300" Height="300" HorizontalAlignment="Left" VerticalAlignment="Center" Grid.Row="5" Grid.Column="4"
+ AcceptsReturn="True" TextWrapping="Wrap" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto"/>
+                        <TextBox Name="txtEmailMessage3" Width="300" Height="300" HorizontalAlignment="Left" VerticalAlignment="Center" Grid.Row="5" Grid.Column="5"
+ AcceptsReturn="True" TextWrapping="Wrap" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto"/>
+
+                        <!-- Buttons for Email and SMS Temp Save -->
+                        <Button Name="btnEmailTempSave" Click="btnEmailTempSave_Click" Content="Save" Width="100" Height="30" Grid.Row="6" Grid.Column="4" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="0,46,0,0"/>
+                        <Label Name="lblSMSMessage" Content="SMS" Width="75" Height="30" Grid.Row="6" Grid.Column="0" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="0,20,0,0"/>
+
+                        <StackPanel Width="400" Height="400" Orientation="Vertical" HorizontalAlignment="Left" VerticalAlignment="Top" Grid.Row="7" Grid.ColumnSpan="5" Margin="74,0,0,0">
+                            <Border Margin="0,10,0,0">
+                                <Button x:Name="btnSMSTempSave" Click="btnSMSTempSave_Click" Content="Save" Width="0" Height="0" HorizontalAlignment="Left" VerticalAlignment="Top"/>
+                            </Border>
+                        </StackPanel>
+
+                        <!-- TextBox for SMS Message -->
+                        <TextBox x:Name="txtSMSMessage1" AcceptsReturn="True" TextWrapping="Wrap" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto" Grid.Column="2" Margin="0,11,100,40" Grid.Row="6" Grid.ColumnSpan="2"/>
+                    </Grid>
+                </TabItem>
+                <TabItem Header="Logs" Margin="-2,0,-2,0">
+                    <Grid Name="GridLog" Background="#FFE5E5E5">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="*"/>
+                        </Grid.RowDefinitions>
+
+                        <TextBox x:Name="txtLog" 
+                 TextWrapping="Wrap" 
+                 VerticalScrollBarVisibility="Auto" 
+                 HorizontalScrollBarVisibility="Auto"  
+                 Style="{StaticResource TextBoxStyle}" />
+
+                    </Grid>
+                </TabItem>
+            </TabControl>
+        </Grid>
+    </Grid>
+</Window>
+
