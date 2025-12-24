@@ -47,6 +47,10 @@ Class MainWindow
     Private newWindowHeight As Double
     Public FlagAutoStatusChangeEmailsEnabled As Boolean = False
     Private LastOfferPrice As String = ""
+    Private CurrentPropertyAddress As String = ""
+    Private LastExtractedAddress As String = ""
+    Private LastSentAddressToOfferGun As String = ""
+
 
     Private Sub CurrentDomain_UnhandledException(ByVal sender As Object, ByVal e As UnhandledExceptionEventArgs)
         Dim exception As Exception = CType(e.ExceptionObject, Exception)
@@ -592,16 +596,17 @@ Class MainWindow
             Await GetStatusData(CoreWV)
         ElseIf url.Contains("https://app.privy.pro/users/sign_in") Then
             privylogin(CoreWV)
-        ElseIf url.Contains("https://app.pipedrive.com/auth/login") Then
+            'ElseIf url.Contains("https://app.pipedrive.com/auth/login") Then
             'pipelogin(CoreWV)
         ElseIf url.Contains("https://www.offergun.com/login") Then
             offergunlogin(CoreWV)
 
-        ElseIf url.Contains("https://www.offergun.com/generate") Then
-            Await OfferGunAutoFill()
-            Exit Sub
-
         End If
+        If url.Contains("https://www.offergun.com/generate") Then
+            Await OfferGunAutoFill()
+            Await UpdateOfferGunAddress()
+        End If
+
     End Sub
     Private Async Function OfferGunAutoFill() As Task
 
@@ -658,20 +663,140 @@ Class MainWindow
     ")
 
     End Function
+    Private Async Function ExtractMatrixAddress(CoreWV As CoreWebView2) As Task
+        Try
+            Dim result As String = Await CoreWV.ExecuteScriptAsync(
+        "
+        (function(){
+            let el = document.querySelector('span.d-mega');
+            if(!el) return null;
+            let t = el.innerText.trim();
+            return t === '' ? null : t;
+        })();
+        ")
 
+            If String.IsNullOrWhiteSpace(result) OrElse result = "null" Then Exit Function
 
+            ' Remove JS string quotes
+            result = result.Trim(""""c)
 
-    Private Sub WebView_DOMContentLoaded(sender As Object, e As CoreWebView2DOMContentLoadedEventArgs)
+            ' Update only if changed
+            If result <> LastExtractedAddress Then
+                LastExtractedAddress = result
+                CurrentPropertyAddress = result
+
+                ' Optional: reflect in UI
+                Dispatcher.Invoke(Sub()
+                                      txtAddressSearch.Text = CurrentPropertyAddress
+                                  End Sub)
+                Await UpdateOfferGunAddress()
+            End If
+
+        Catch ex As System.Exception
+            ' swallow errors safely
+        End Try
+    End Function
+    Private Async Function UpdateOfferGunAddress() As Task
+
+        Try
+            ' ---- Safety checks ----
+            If WebViewog Is Nothing OrElse WebViewog.CoreWebView2 Is Nothing Then Return
+
+            Dim url As String = WebViewog.Source?.ToString()?.ToLower()
+            If String.IsNullOrEmpty(url) OrElse Not url.Contains("offergun.com/generate") Then Return
+
+            Dim addr As String = CurrentPropertyAddress
+            If String.IsNullOrWhiteSpace(addr) Then Return
+
+            ' Prevent duplicate injection
+            If addr = LastSentAddressToOfferGun Then Return
+
+            ' Serialize address safely for JS
+            Dim addressJson As String = System.Text.Json.JsonSerializer.Serialize(addr)
+
+            Dim js As String =
+$"(async function(){{
+
+    function sleep(ms) {{ return new Promise(r => setTimeout(r, ms)); }}
+
+    /* ---------- 1. Wait for address input ---------- */
+    let input = null;
+    for(let i=0;i<15;i++){{
+        input = document.getElementById('search');
+        if(input) break;
+        await sleep(300);
+    }}
+    if(!input) return 'input-not-found';
+
+    /* ---------- 2. Set address (React-safe) ---------- */
+    let setter = Object.getOwnPropertyDescriptor(
+        HTMLInputElement.prototype,'value'
+    ).set;
+
+    setter.call(input, {addressJson});
+    input.dispatchEvent(new Event('input', {{ bubbles:true }}));
+    input.dispatchEvent(new Event('change', {{ bubbles:true }}));
+
+    /* ---------- 3. Allow React to re-render ---------- */
+    await sleep(800);
+
+    /* ---------- 4. Find ENABLED Search button ---------- */
+    let btn = null;
+    for(let i=0;i<15;i++){{
+        btn = [...document.querySelectorAll('button')]
+            .find(b =>
+                b.textContent &&
+                b.textContent.trim().toLowerCase() === 'search' &&
+                !b.disabled &&
+                b.offsetParent !== null
+            );
+        if(btn) break;
+        await sleep(300);
+    }}
+
+    if(!btn) return 'search-button-not-found';
+
+    /* ---------- 5. Real user-like click ---------- */
+    ['pointerdown','mousedown','mouseup','click'].forEach(type => {{
+        btn.dispatchEvent(new MouseEvent(type, {{
+            bubbles: true,
+            cancelable: true,
+            view: window
+        }}));
+    }});
+
+    return 'ok';
+
+}})();"
+
+            Dim result As String = Await WebViewog.CoreWebView2.ExecuteScriptAsync(js)
+
+            If Not String.IsNullOrWhiteSpace(result) AndAlso result.ToLower().Contains("ok") Then
+                LastSentAddressToOfferGun = addr
+                LogMessage("OfferGun search triggered for address: " & addr)
+            Else
+                LogMessage("UpdateOfferGunAddress failed: " & result)
+            End If
+
+        Catch ex As system.Exception
+            fxCommon.GenerateLog(ex)
+        End Try
+
+    End Function
+
+    Private Async Sub WebView_DOMContentLoaded(sender As Object, e As CoreWebView2DOMContentLoadedEventArgs)
         Dim CoreWV As Microsoft.Web.WebView2.Core.CoreWebView2 = sender
         Dim url As String = CoreWV.Source.ToString().ToLower()
         Dim strJScript As String
 
+        If url.Contains("https://matrix.crmls.org/matrix/results") Then
+            Await ExtractMatrixAddress(CoreWV)
+        End If
         ' LblURL.Text = url
         If bCodeProcessing = True Then
 
             If url.Contains("https://signin.crmls.org/account/login") Then
                 SiteLogin(CoreWV)
-
             ElseIf url.Contains("https://matrix.crmls.org/matrix/results.aspx") AndAlso MLSListingSub IsNot String.Empty AndAlso MLSListingMain Is String.Empty Then
                 strJScript = "var links = document.getElementsByTagName('a');var searchText = '" & MLSListingSub & "';for (var i = 0; i < links.length; i++) {if (links[i].innerText === searchText) {links[i].click();break;}}"
                 WebViewMain.CoreWebView2.ExecuteScriptAsync(strJScript)
@@ -1873,6 +1998,37 @@ Class MainWindow
             MessageBox.Show("Exception. Listing ID not exists.")
         End Try
     End Sub
+    Private Async Sub btnOGaddress_Click(sender As Object, e As RoutedEventArgs)
+
+        Try
+            ' Ensure Matrix WebView is ready
+            If WebViewMain.CoreWebView2 Is Nothing Then Exit Sub
+
+            ' Try extracting address from current Matrix page
+            Await ExtractMatrixAddress(WebViewMain.CoreWebView2)
+
+            ' If still empty, extraction failed → stay on page
+            If String.IsNullOrWhiteSpace(CurrentPropertyAddress) Then
+                MessageBox.Show("Property address not found on this page.")
+                Exit Sub
+            End If
+
+            ' Switch to OfferGun tab ONLY when address exists
+            TabControlMain.SelectedIndex = 2   ' OfferGun tab index
+
+            ' Small delay to ensure WebView is visible
+            Await Task.Delay(500)
+
+            ' Populate OfferGun address input
+            Await UpdateOfferGunAddress()
+
+        Catch ex As system.Exception
+            SystemSounds.Exclamation.Play()
+            MessageBox.Show("Failed to copy property address.")
+        End Try
+
+    End Sub
+
 
     ' Returns an empty string if the value is DBNull, otherwise returns the value as a string.
     Private Function SafeStr(value As Object) As String
