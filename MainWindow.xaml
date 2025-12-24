@@ -661,8 +661,8 @@
                         <!-- Save Button - Moved to the top -->
                         <StackPanel Orientation="Horizontal" HorizontalAlignment="Left" Grid.Row="0" Margin="5,5,0,5" Width="840" Grid.ColumnSpan="2">
                             <Button Name="btnSaveSettings" Grid.Row="0" HorizontalAlignment="Left" Margin="15,15,0,5" Padding="5" Content="Save Settings" Click="btnSaveSettings_Click" Style="{StaticResource ButtonStyle}" />
-                            <Button Name="btnSyncPipeDrive" Grid.Row="0" HorizontalAlignment="Left" Margin="15,15,0,5" Padding="5" Content="PipeDrive Download" Click="btnSyncPipeDrive_Click" Style="{StaticResource ButtonStyle}" />
-                            <Button Name="btnLinkEmails" Grid.Row="0" HorizontalAlignment="Left" Margin="15,15,0,5" Padding="5" Content="Link Emails" Click="btnLinkEmails_Click" Style="{StaticResource ButtonStyle}" />
+                            <!--<Button Name="btnSyncPipeDrive" Grid.Row="0" HorizontalAlignment="Left" Margin="15,15,0,5" Padding="5" Content="PipeDrive Download" Click="btnSyncPipeDrive_Click" Style="{StaticResource ButtonStyle}" />
+                            <Button Name="btnLinkEmails" Grid.Row="0" HorizontalAlignment="Left" Margin="15,15,0,5" Padding="5" Content="Link Emails" Click="btnLinkEmails_Click" Style="{StaticResource ButtonStyle}" />-->
                         </StackPanel>
                         <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" Grid.ColumnSpan="2">
                             <!-- Main Grid for two-column layout -->

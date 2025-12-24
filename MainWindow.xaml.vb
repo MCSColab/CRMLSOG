@@ -82,7 +82,7 @@ Class MainWindow
         AddHandler WebViewPrivy.CoreWebView2InitializationCompleted, AddressOf WebViewStatus_CoreWebView2InitializationCompleted
         'AddHandler WebViewPipe.CoreWebView2InitializationCompleted, AddressOf WebViewStatus_CoreWebView2InitializationCompleted
         AddHandler WebViewog.CoreWebView2InitializationCompleted, AddressOf WebViewStatus_CoreWebView2InitializationCompleted
-        AddHandler WebViewOg2.CoreWebView2InitializationCompleted, AddressOf WebViewStatus_CoreWebView2InitializationCompleted
+        AddHandler WebViewog2.CoreWebView2InitializationCompleted, AddressOf WebViewStatus_CoreWebView2InitializationCompleted
         AddHandler txtPrice.TextChanged, AddressOf TxtPrice_TextChanged
 
         bCodeProcessing = True
