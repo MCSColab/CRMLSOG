@@ -587,8 +587,6 @@ Class MainWindow
         If url.Contains("https://signin.crmls.org/account/login") Then
             SiteLogin(CoreWV)
             bCodeProcessing = True
-        ElseIf url.Contains("https://matrix.crmls.org/matrix/results.aspx") Then
-            Await ExtractMatrixAddress(CoreWV)
         ElseIf url.Contains("https://matrix.crmls.org/matrix/default.aspx") AndAlso MLSListingStatus IsNot String.Empty Then
             Await CoreWV.ExecuteScriptAsync("document.getElementById('ctl02_m_ucSpeedBar_m_tbSpeedBar').value = '" & MLSListingStatus & "';")
             Threading.Thread.Sleep(200)
@@ -608,6 +606,7 @@ Class MainWindow
             Await OfferGunAutoFill()
             Await UpdateOfferGunAddress()
         End If
+
     End Sub
     Private Async Function OfferGunAutoFill() As Task
 
@@ -700,34 +699,66 @@ Class MainWindow
 
     Private Async Function UpdateOfferGunAddress() As Task
 
-        If WebViewog.CoreWebView2 Is Nothing Then Exit Function
+        ' Robust setter: waits for the OfferGun input to exist, retries, then sets React-friendly value.
+        If WebViewog Is Nothing OrElse WebViewog.CoreWebView2 Is Nothing Then Return
 
         Dim url = WebViewog.Source?.ToString().ToLower()
-        If url Is Nothing OrElse Not url.Contains("offergun.com/generate") Then Exit Function
+        If url Is Nothing OrElse Not url.Contains("offergun.com/generate") Then Return
 
         Dim addr As String = CurrentPropertyAddress
-        If String.IsNullOrWhiteSpace(addr) Then Exit Function
+        If String.IsNullOrWhiteSpace(addr) Then Return
 
-        ' Prevent unnecessary re-injection
-        If addr = LastSentAddressToOfferGun Then Exit Function
-        LastSentAddressToOfferGun = addr
+        ' If identical to last successfully sent address, no-op
+        If addr = LastSentAddressToOfferGun Then Return
 
-        Await WebViewog.CoreWebView2.ExecuteScriptAsync(
-    "
-    (function(){
-        let i = document.getElementById('search');
-        if(!i) return;
+        ' Serialize the address to a JS-safe string
+        Dim addressJson As String = System.Text.Json.JsonSerializer.Serialize(addr)
 
-        let setter = Object.getOwnPropertyDescriptor(
-            HTMLInputElement.prototype,'value'
-        ).set;
+        ' Retry check loop: wait for the input to appear and then set value
+        Dim maxAttempts As Integer = 12
+        Dim attemptDelayMs As Integer = 300
 
-        setter.call(i, `" & addr.Replace("`", "\`") & "`);
-        i.dispatchEvent(new Event('input', { bubbles:true }));
-        i.dispatchEvent(new Event('change', { bubbles:true }));
-    })();
-    ")
+        For attempt As Integer = 1 To maxAttempts
+            Try
+                ' Quick presence check for the input with id 'search'
+                Dim checkJs As String = "(function(){ return document.getElementById('search') ? true : false; })();"
+                Dim checkResult As String = Await WebViewog.CoreWebView2.ExecuteScriptAsync(checkJs)
+                If Not String.IsNullOrWhiteSpace(checkResult) AndAlso checkResult.ToLower().Contains("true") Then
+                    ' Input exists — set the value using the native setter (React-safe)
+                    Dim setJs As String =
+$"(function(){{
+    var i = document.getElementById('search');
+    if(!i) return 'notfound';
+    var setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set;
+    try {{
+        setter.call(i, {addressJson});
+        i.dispatchEvent(new Event('input', {{ bubbles: true }}));
+        i.dispatchEvent(new Event('change', {{ bubbles: true }}));
+        return 'ok';
+    }} catch(e) {{
+        return 'err:' + (e && e.message ? e.message : 'unknown');
+    }}
+}})();"
 
+                    Dim setResult As String = Await WebViewog.CoreWebView2.ExecuteScriptAsync(setJs)
+
+                    If Not String.IsNullOrWhiteSpace(setResult) AndAlso setResult.ToLower().Contains("ok") Then
+                        LastSentAddressToOfferGun = addr
+                        LogMessage("OfferGun address updated: " & addr)
+                        Return
+                    Else
+                        ' Try again (sometimes React layers intercept)
+                        LogMessage("UpdateOfferGunAddress: setResult=" & setResult)
+                    End If
+                End If
+            Catch ex As Exception
+                fxCommon.GenerateLog(ex)
+            End Try
+
+            Await Task.Delay(attemptDelayMs)
+        Next
+
+        LogMessage("UpdateOfferGunAddress: input not found or failed to set after retries. Address: " & addr)
     End Function
 
 
