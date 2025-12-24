@@ -138,7 +138,7 @@
             <TextBox Name="txtPrice" Width="100" Height="20" Grid.Row="2" HorizontalAlignment="Center" PreviewTextInput="txtPrice_PreviewTextInput" LostFocus="txtPrice_LostFocus" Style="{StaticResource TextBoxStyle}" />
 
             <Label Content="ARV " Width="110" Height="25" Grid.Row="3" HorizontalAlignment="Center" />
-            <TextBox Name="txtARVPrice" Width="100" Height="20" Grid.Row="4" HorizontalAlignment="Center" PreviewTextInput="txtPrice_PreviewTextInput" LostFocus="txtPrice_LostFocus" Style="{StaticResource TextBoxStyle}" />
+            <TextBox Name="txtARVPrice" Width="100" Height="20" Grid.Row="4" HorizontalAlignment="Center" PreviewTextInput="txtPrice_PreviewTextInput" LostFocus="txtPrice_LostFocus" Style="{StaticResource TextBoxStyle}" TextChanged="txtPrice_TextChanged" />
 
             <ComboBox Name="cmbEmailTemplate" Width="100" Height="25" Grid.Row="5" HorizontalAlignment="Center" Style="{StaticResource ComboBoxStyle}" />
             <ComboBox Name="cmbEmailAccount" SelectionChanged="cmbEmailAccount_SelectionChanged"  Width="100" Height="25" Grid.Row="6" HorizontalAlignment="Center" Style="{StaticResource ComboBoxStyle}" />
@@ -365,9 +365,13 @@
                             <RowDefinition Height="1.12"/>
                         </Grid.RowDefinitions>
 
-                        --><!-- Action Buttons and Filter Section --><!--
+                        -->
+                <!-- Action Buttons and Filter Section -->
+                <!--
                         <StackPanel Orientation="Horizontal" HorizontalAlignment="Left" Grid.Row="0" Margin="5,5,0,5" Width="840" Grid.ColumnSpan="4">
-                            --><!-- Action Buttons --><!--
+                            -->
+                <!-- Action Buttons -->
+                <!--
                             <Button Content="Delete" Click="btnDgGridDelete_Click" Style="{StaticResource ButtonStyle}" Margin="5"/>
                             <Button Content="Go [Analyze]" Click="btnDgGridGoComp_Click" Style="{StaticResource ButtonStyle}" Margin="5"/>
                             <Button Content="Go Listing [Main]" Click="btnCompGoListing_Click" Style="{StaticResource ButtonStyle}" Margin="5"/>
@@ -377,9 +381,11 @@
                             <Button Content="PipeDrive Download" Click="btnSyncPipeDrive_Click" Style="{StaticResource ButtonStyle}" Margin="5"/>
                             <Button Content="PipeDrive Upload" Click="btnUpdPipeDrive_Click" Style="{StaticResource ButtonStyle}" Margin="5"/>
 
-                            --><!--<Button Content="Appointment" Click="btnAddAppointment_Click" Style="{StaticResource ButtonStyle}" Margin="5"/>
+                            -->
+                <!--<Button Content="Appointment" Click="btnAddAppointment_Click" Style="{StaticResource ButtonStyle}" Margin="5"/>
                             <Button Content="Move To Leads" Click="btnMoveToLeads_Click" Style="{StaticResource ButtonStyle}" Margin="5"/>
-                            <Button Content="Create PDF" Click="EditPDF_Click" Style="{StaticResource ButtonStyle}" Margin="5"/>--><!--
+                            <Button Content="Create PDF" Click="EditPDF_Click" Style="{StaticResource ButtonStyle}" Margin="5"/>-->
+                <!--
                             <Separator Grid.Column="4" Style="{StaticResource {x:Static ToolBar.SeparatorStyleKey}}" Margin="5,0"/>
                             <Button Content="Export" Click="btnExportLeads_Click" Style="{StaticResource ButtonStyle}" Margin="5"/>
                             <Button Content="Drag" Name="btnTabOpportunities" Click="btnTabOpportunities_Click" Style="{StaticResource ButtonStyle}" Margin="5"/>
@@ -387,7 +393,9 @@
                         <Border Margin="1,0,21,5" Grid.ColumnSpan="3">
                             <Wpf:WebView2 Name="WebViewStatus" HorizontalAlignment="Left" Width="0" Height="0" Grid.Row="1" Grid.Column="0" />
                         </Border>
-                        --><!-- Status Filter Radio Buttons --><!--
+                        -->
+                <!-- Status Filter Radio Buttons -->
+                <!--
                         <StackPanel Orientation="Horizontal" HorizontalAlignment="Left" Grid.Row="1" Margin="5,1,0,3" Width="750" Grid.ColumnSpan="3">
                             <RadioButton Name="rdoAll" Content="All" GroupName="rdoMLSStatus" Checked="rdoAll_Checked" Margin="5"/>
                             <RadioButton Name="rdoActive" Content="Active" GroupName="rdoMLSStatus" Checked="rdoActive_Checked" Margin="5"/>
@@ -403,7 +411,9 @@
                             <Label  Name="lbldgStatus"  Content="Display/Selected: 0/0" VerticalAlignment="Center"/>
                             <CheckBox Name="chkSelectAll" Checked="chkSelectAll_Checked" Unchecked="chkSelectAll_Unchecked" Content="Select All"  VerticalAlignment="Center" Margin="15,0,0,0"/>
                         </StackPanel>
-                        --><!-- Details DataGrid --><!--
+                        -->
+                <!-- Details DataGrid -->
+                <!--
                         <DataGrid Name="dgDetails" 
                                   AutoGenerateColumns="True" 
                                   CanUserAddRows="False" 
@@ -422,7 +432,9 @@
                                 </TransformGroup>
                             </DataGrid.RenderTransform>
                             <DataGrid.Columns>
-                                --><!-- Predefined Checkbox Column --><!--
+                                -->
+                <!-- Predefined Checkbox Column -->
+                <!--
                                 <DataGridTemplateColumn Header="Sel" Width="SizeToCells" IsReadOnly="False">
                                     <DataGridTemplateColumn.CellTemplate>
                                         <DataTemplate>
@@ -462,14 +474,18 @@
                                 </Style>
                             </DataGrid.RowStyle>
                         </DataGrid>
-                        --><!-- Notes and Communication Section --><!--
+                        -->
+                <!-- Notes and Communication Section -->
+                <!--
                         <Grid Grid.Row="4" Margin="15,5,15,-4" Background="#F0F0F0" Grid.ColumnSpan="6">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="0"/>
                                 <ColumnDefinition Width="0*"/>
                             </Grid.ColumnDefinitions>
 
-                            --><!-- Notes Log --><!--
+                            -->
+                <!-- Notes Log -->
+                <!--
                             <StackPanel Grid.Column="1" Margin="15,0,15,0">
                                 <Label Content="Notes Log" Margin="0,0,0,0"/>
                                 <DataGrid Name="dgNotes" AutoGenerateColumns="False" CanUserAddRows="True" IsReadOnly="False" Height="200" Margin="0,0,0,5">
@@ -489,7 +505,9 @@
 
                             </StackPanel>
 
-                            --><!-- SMS and Call --><!--
+                            -->
+                <!-- SMS and Call -->
+                <!--
                             <StackPanel Grid.Column="0" Margin="5">
                                 <Label Content="Add Notes" Margin="0,0,0,0"/>
                                 <TextBox Name="txtAddNotes" TextWrapping="Wrap" AcceptsReturn="True" Height="100" Margin="0,0,0,5"/>
@@ -519,7 +537,9 @@
                             <ColumnDefinition Width="*"/>
                         </Grid.ColumnDefinitions>
 
-                        --><!-- Navigation Buttons --><!--
+                        -->
+                <!-- Navigation Buttons -->
+                <!--
                         <Grid HorizontalAlignment="Center" VerticalAlignment="Center" >
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="Auto"/>
@@ -531,10 +551,14 @@
                             <Button Name="btnCompGoListingfromPipeDrive" Content="Analyze" Click="btnCompGoListingfromPipeDrive_Click" Style="{StaticResource ButtonStyle}" Grid.Column="1" Margin="10,5,10,0" Height="24" VerticalAlignment="Top" />
                             <Button Name="btnPipeBack" Content="&lt;" Click="btnPipeBack_Click" Style="{StaticResource ButtonStyle}" Grid.Column="2" Margin="1,5,1,5"/>
                             <Button Name="btnPipeFwd" Content="&gt;" Click="btnPipeFwd_Click" Style="{StaticResource ButtonStyle}" Grid.Column="3" Margin="3,5,21,5"/>
-                            --><!--<Button Content="Drag" Name="btnTabPrivy" Click="btnTabPrivy_Click" Style="{StaticResource ButtonStyle}"  Grid.Column="2" Margin="44,5,-37,5" />--><!--
+                            -->
+                <!--<Button Content="Drag" Name="btnTabPrivy" Click="btnTabPrivy_Click" Style="{StaticResource ButtonStyle}"  Grid.Column="2" Margin="44,5,-37,5" />-->
+                <!--
 
                         </Grid>
-                        --><!-- WebView --><!--
+                        -->
+                <!-- WebView -->
+                <!--
                         <Wpf:WebView2 Name="WebViewPipe" Grid.Row="1" Grid.ColumnSpan="4" Margin="10,5,10,10"/>
                     </Grid>
                 </TabItem>-->
@@ -687,7 +711,7 @@
                                     </GroupBox>
 
                                     <!-- PIPE Credentials -->
-                                    <GroupBox Header="PIPE Credentials" FontWeight="Bold" Margin="0,5">
+                                    <!--<GroupBox Header="PIPE Credentials" FontWeight="Bold" Margin="0,5">
                                         <Grid Margin="10">
                                             <Grid.RowDefinitions>
                                                 <RowDefinition Height="Auto" />
@@ -708,7 +732,7 @@
                                             <Label Grid.Row="3" Grid.Column="0" Content="Company Name:" VerticalAlignment="Center"/>
                                             <TextBox Name="txtPipeCompanyName" Grid.Row="3" Grid.Column="1" Margin="5" VerticalAlignment="Center" Width="250" HorizontalAlignment="Left"/>
                                         </Grid>
-                                    </GroupBox>
+                                    </GroupBox>-->
                                 </StackPanel>
 
                                 <!-- RIGHT COLUMN -->
@@ -739,9 +763,7 @@
                                             <TextBox Name="txtMlsOther" Grid.Row="4" Grid.Column="1" Margin="5" VerticalAlignment="Center" Width="250" HorizontalAlignment="Left"/>
                                         </Grid>
                                     </GroupBox>
-
-                                    <!-- MLS Settings -->
-                                    <GroupBox Header="MLS Search Settings" FontWeight="Bold" Margin="0,5">
+                                    <GroupBox Header="MLS Search Settings" FontWeight="Bold">
                                         <Grid Margin="10">
                                             <Grid.RowDefinitions>
                                                 <RowDefinition Height="Auto" />
@@ -753,13 +775,15 @@
                                                 <ColumnDefinition Width="*" />
                                             </Grid.ColumnDefinitions>
                                             <Label Grid.Row="0" Grid.Column="0" Content="Miles:" VerticalAlignment="Center"/>
-                                            <TextBox Name="txtMlsMiles" Grid.Row="0" Grid.Column="1" Margin="5" VerticalAlignment="Center" Width="250" HorizontalAlignment="Left"/>
+                                            <TextBox x:Name="txtMlsMiles" Grid.Row="0" Grid.Column="1" Margin="5" VerticalAlignment="Center" Width="250" HorizontalAlignment="Left"/>
                                             <Label Grid.Row="1" Grid.Column="0" Content="Subcat:" VerticalAlignment="Center"/>
-                                            <TextBox Name="txtMlsSubcat" Grid.Row="1" Grid.Column="1" Margin="5" VerticalAlignment="Center" Width="250" HorizontalAlignment="Left"/>
+                                            <TextBox x:Name="txtMlsSubcat" Grid.Row="1" Grid.Column="1" Margin="5" VerticalAlignment="Center" Width="250" HorizontalAlignment="Left"/>
                                             <Label Grid.Row="2" Grid.Column="0" Content="Sqft:" VerticalAlignment="Center"/>
-                                            <TextBox Name="txtMlsSqft" Grid.Row="2" Grid.Column="1" Margin="5" VerticalAlignment="Center" Width="250" HorizontalAlignment="Left"/>
+                                            <TextBox x:Name="txtMlsSqft" Grid.Row="2" Grid.Column="1" Margin="5" VerticalAlignment="Center" Width="250" HorizontalAlignment="Left"/>
                                         </Grid>
                                     </GroupBox>
+
+                                    <!-- MLS Settings -->
 
                                     <!-- General Settings -->
                                     <GroupBox Header="General Settings" FontWeight="Bold" Margin="0,5">
@@ -788,7 +812,9 @@
                 <!--<TabItem Header="Email" Margin="-2,0,-2,0">
                     <Grid Name="GridEmail" Background="#FFE5E5E5">
                         <Grid.ColumnDefinitions>
-                            --><!-- Adjusted column widths --><!--
+                            -->
+                <!-- Adjusted column widths -->
+                <!--
                             <ColumnDefinition Width="85"/>
                             <ColumnDefinition Width="20"/>
                             <ColumnDefinition Width="35.2"/>
@@ -807,25 +833,33 @@
                             <RowDefinition Height="413"/>
                         </Grid.RowDefinitions>
 
-                        --><!-- Email Type Radio Buttons --><!--
+                        -->
+                <!-- Email Type Radio Buttons -->
+                <!--
                         <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Grid.Column="1" Visibility="Visible" Grid.ColumnSpan="3" Height="14">
                             <RadioButton Name="rdoMessage" GroupName="rdoEmailType" Checked="rdoEmailType_Checked" Margin="20,0,25,0">Message</RadioButton>
                             <RadioButton Name="rdoCollaboration" GroupName="rdoEmailType" Checked="rdoEmailType_Checked"  Margin="2,0,25,0">Offers</RadioButton>
                             <RadioButton Name="rdoStatusUpdate" GroupName="rdoEmailType" Checked="rdoEmailType_Checked">AutoUpdates</RadioButton>
                         </StackPanel>
 
-                        --><!-- Labels for Messages --><!--
+                        -->
+                <!-- Labels for Messages -->
+                <!--
                         <Label Name="lblMessage1" Grid.Row="1" Grid.Column="3" Margin="65,5,100,5"/>
                         <Label Name="lblMessage2" Grid.Row="1" Grid.Column="4" Margin="100,5,100,5"/>
                         <Label Name="lblMessage3" Grid.Row="1" Grid.Column="5" Margin="100,5,100,5"/>
 
-                        --><!-- Subject Labels and TextBoxes --><!--
+                        -->
+                <!-- Subject Labels and TextBoxes -->
+                <!--
                         <Label Name="lblSubject0" Content="Subject" Width="100" Height="30" Grid.Row="2" Grid.Column="0" HorizontalAlignment="Left" VerticalAlignment="Top" Grid.ColumnSpan="2"/>
                         <TextBox Name="txtEmailSubject1" Width="300" Height="20" HorizontalAlignment="Left" VerticalAlignment="Top" Grid.Row="2" Grid.Column="2" Grid.ColumnSpan="2"/>
                         <TextBox Name="txtEmailSubject2" Width="300" Height="20" HorizontalAlignment="Left" VerticalAlignment="Top" Grid.Row="2" Grid.Column="4"/>
                         <TextBox Name="txtEmailSubject3" Width="300" Height="20" HorizontalAlignment="Left" VerticalAlignment="Top" Grid.Row="2" Grid.Column="5"/>
 
-                        --><!-- Attachment Labels and Browse Buttons --><!--
+                        -->
+                <!-- Attachment Labels and Browse Buttons -->
+                <!--
                         <Label Name="lblEmailAttach" Content="Attachment" Width="100" Height="30" Grid.Row="3" Grid.Column="0" HorizontalAlignment="Left" VerticalAlignment="Top" Grid.ColumnSpan="2"/>
                         <Label Name="lblEmailAttach1" Content="Attachment1" Width="320" Height="48" Grid.Row="3" Grid.Column="2" HorizontalAlignment="Left" VerticalAlignment="Top" Grid.ColumnSpan="2"/>
                         <StackPanel Height="35" Orientation="Horizontal" VerticalAlignment="Center" Grid.Row="4" Grid.Column="2" Grid.ColumnSpan="2">
@@ -840,7 +874,9 @@
                             <Button x:Name="btnEmailBrowse3" Style="{StaticResource ButtonStyle}" Content="Browse" Click="btnEmailBrowse1_Click" Width="80" Height="25"/>
                         </StackPanel>
 
-                        --><!-- Email Message TextBoxes --><!--
+                        -->
+                <!-- Email Message TextBoxes -->
+                <!--
                         <Label Name="lblEmailMessage" Content="Message" Width="200" Height="30" Grid.Row="5" Grid.Column="0" HorizontalAlignment="Left" VerticalAlignment="Top" Grid.ColumnSpan="4"/>
                         <TextBox Name="txtEmailMessage1" Width="300" Height="300" HorizontalAlignment="Left" VerticalAlignment="Center" Grid.Row="5" Grid.Column="2"
  AcceptsReturn="True" TextWrapping="Wrap" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto" Grid.ColumnSpan="2"/>
@@ -849,7 +885,9 @@
                         <TextBox Name="txtEmailMessage3" Width="300" Height="300" HorizontalAlignment="Left" VerticalAlignment="Center" Grid.Row="5" Grid.Column="5"
  AcceptsReturn="True" TextWrapping="Wrap" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto"/>
 
-                        --><!-- Buttons for Email and SMS Temp Save --><!--
+                        -->
+                <!-- Buttons for Email and SMS Temp Save -->
+                <!--
                         <Button Name="btnEmailTempSave" Click="btnEmailTempSave_Click" Content="Save" Width="100" Height="30" Grid.Row="6" Grid.Column="4" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="0,46,0,0"/>
                         <Label Name="lblSMSMessage" Content="SMS" Width="75" Height="30" Grid.Row="6" Grid.Column="0" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="0,20,0,0"/>
 
@@ -859,7 +897,9 @@
                             </Border>
                         </StackPanel>
 
-                        --><!-- TextBox for SMS Message --><!--
+                        -->
+                <!-- TextBox for SMS Message -->
+                <!--
                         <TextBox x:Name="txtSMSMessage1" AcceptsReturn="True" TextWrapping="Wrap" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto" Grid.Column="2" Margin="0,11,100,40" Grid.Row="6" Grid.ColumnSpan="2"/>
                     </Grid>
                 </TabItem>

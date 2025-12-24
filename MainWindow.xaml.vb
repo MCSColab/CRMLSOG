@@ -46,6 +46,7 @@ Class MainWindow
     Private newWindowWidth As Double
     Private newWindowHeight As Double
     Public FlagAutoStatusChangeEmailsEnabled As Boolean = False
+    Private LastOfferPrice As String = ""
 
     Private Sub CurrentDomain_UnhandledException(ByVal sender As Object, ByVal e As UnhandledExceptionEventArgs)
         Dim exception As Exception = CType(e.ExceptionObject, Exception)
@@ -82,6 +83,7 @@ Class MainWindow
         'AddHandler WebViewPipe.CoreWebView2InitializationCompleted, AddressOf WebViewStatus_CoreWebView2InitializationCompleted
         AddHandler WebViewog.CoreWebView2InitializationCompleted, AddressOf WebViewStatus_CoreWebView2InitializationCompleted
         AddHandler WebViewOg2.CoreWebView2InitializationCompleted, AddressOf WebViewStatus_CoreWebView2InitializationCompleted
+        AddHandler txtPrice.TextChanged, AddressOf TxtPrice_TextChanged
 
         bCodeProcessing = True
         chkAutoFill.IsChecked = isAutofillEnabled
@@ -92,7 +94,7 @@ Class MainWindow
         WebViewog2.Source = New Uri("https://www.offergun.com/offer-history")
         'TabControlMain.SelectedIndex = 5
 
-        TabControlMain.SelectedIndex = 2
+        TabControlMain.SelectedIndex = 3
         cmbEmailAccount.ItemsSource = fxCommon.GetOutlookEmailAccounts()
         cmbEmailAccount.SelectedIndex = 0
         Dim xmlDoc As New XmlDocument()
@@ -108,6 +110,50 @@ Class MainWindow
         origLeftSidebarWidth = SidebarColumn.Width.Value
         origRightSidebarWidth = RightSidebarColumn.Width.Value
     End Sub
+
+    Private Async Sub TxtPrice_TextChanged(
+    sender As Object,
+    e As TextChangedEventArgs
+)
+        Dim price = txtPrice.Text
+        If price = "" Then Exit Sub
+
+        LastOfferPrice = price
+
+        ' Live push if already on OfferGun
+        If WebViewog.CoreWebView2 IsNot Nothing Then
+            Dim url = WebViewog.Source?.ToString().ToLower()
+            If url IsNot Nothing AndAlso url.Contains("offergun.com/generate") Then
+                Await ApplyOfferGunPrice()
+            End If
+        End If
+    End Sub
+
+    Private Async Function ApplyOfferGunPrice() As Task
+
+        If LastOfferPrice = "" Then Exit Function
+
+        ' Wait for React hydration
+        Await Task.Delay(1000)
+
+        Await WebViewog.CoreWebView2.ExecuteScriptAsync(
+    "
+    (function(){
+        let i=document.querySelector('input[name=offerPrice]');
+        if(!i) return;
+
+        let s=Object.getOwnPropertyDescriptor(
+            HTMLInputElement.prototype,'value'
+        ).set;
+
+        s.call(i,'" & LastOfferPrice & "');
+        i.dispatchEvent(new Event('input',{bubbles:true}));
+        i.dispatchEvent(new Event('change',{bubbles:true}));
+    })();
+    ")
+
+    End Function
+
     Private Function IsOutlookRunning() As Boolean
         Dim processes() As Process = Process.GetProcessesByName("OUTLOOK")
         Return processes.Length > 0
@@ -551,11 +597,69 @@ Class MainWindow
         ElseIf url.Contains("https://www.offergun.com/login") Then
             offergunlogin(CoreWV)
 
-            'ElseIf url.Contains("https://www.offergun.com/offer-history") Then
-            'offergunOG(CoreWV)
+        ElseIf url.Contains("https://www.offergun.com/generate") Then
+            Await OfferGunAutoFill()
+            Exit Sub
 
         End If
     End Sub
+    Private Async Function OfferGunAutoFill() As Task
+
+        Dim price As String = txtPrice.Text
+        ' Wait for React + Radix UI to be ready
+        Await Task.Delay(1200)
+
+        ' 1. Select Template
+        Await WebViewog.CoreWebView2.ExecuteScriptAsync(
+    "
+    (async function(){
+        let btn=[...document.querySelectorAll('button')]
+            .find(b=>b.innerText.includes('Select a template'));
+        if(!btn) return;
+        btn.click();
+        await new Promise(r=>setTimeout(r,600));
+        let item=[...document.querySelectorAll('[role=menuitem],[role=option]')]
+            .find(e=>e.innerText.trim()==='Cash Offer');
+        if(item) item.click();
+    })();
+    ")
+
+        Await Task.Delay(600)
+
+        ' 2. Select Buyer
+        Await WebViewog.CoreWebView2.ExecuteScriptAsync(
+    "
+    (async function(){
+        let btn=[...document.querySelectorAll('button')]
+            .find(b=>b.innerText.includes('Select a Buyer'));
+        if(!btn) return;
+        btn.click();
+        await new Promise(r=>setTimeout(r,600));
+        let item=[...document.querySelectorAll('[role=menuitem],[role=option]')]
+            .find(e=>e.innerText.trim()==='John Smith');
+        if(item) item.click();
+    })();
+    ")
+
+        Await Task.Delay(600)
+
+        ' 3. Fill Offer Price (React-safe)
+        Await WebViewog.CoreWebView2.ExecuteScriptAsync(
+    "
+    (function(){
+        let i=document.querySelector('input[name=offerPrice]');
+        if(!i) return;
+        let s=Object.getOwnPropertyDescriptor(
+            HTMLInputElement.prototype,'value').set;
+       s.call(i,'" & price & "');
+        i.dispatchEvent(new Event('input',{bubbles:true}));
+        i.dispatchEvent(new Event('change',{bubbles:true}));
+    })();
+    ")
+
+    End Function
+
+
 
     Private Sub WebView_DOMContentLoaded(sender As Object, e As CoreWebView2DOMContentLoadedEventArgs)
         Dim CoreWV As Microsoft.Web.WebView2.Core.CoreWebView2 = sender
@@ -738,6 +842,91 @@ Class MainWindow
         ' Cleanup
         RemoveHandler WebViewComp.CoreWebView2.WebMessageReceived, AddressOf WebView_WebMessageReceived
     End Sub
+    'Private Async Sub SelectBuyer(wv As Microsoft.Web.WebView2.Wpf.WebView2, buyerName As String)
+
+    '    Dim js As String =
+    '"
+    '(async function(){
+
+    '    let btn = [...document.querySelectorAll('button')]
+    '        .find(b => b.innerText.includes('Select a Buyer'));
+
+    '    if (!btn) return 'buyer-button-not-found';
+
+    '    btn.click();
+
+    '    await new Promise(r => setTimeout(r, 800));
+
+    '    let item = [...document.querySelectorAll('[role=menuitem],[role=option]')]
+    '        .find(el => el.innerText.trim() === '" & buyerName & "');
+
+    '    if (!item) return 'buyer-item-not-found';
+
+    '    item.click();
+    '    return 'ok';
+    '})();
+    '"
+
+    '    Await wv.CoreWebView2.ExecuteScriptAsync(js)
+
+    'End Sub
+
+    'Private Async Sub FillOfferPrice(wv As Microsoft.Web.WebView2.Wpf.WebView2, price As String)
+
+    '    Dim js As String =
+    '"
+    '(function(){
+    '    let input = document.querySelector('input[name=offerPrice]');
+    '    if (!input) return 'not-found';
+
+    '    let setter = Object.getOwnPropertyDescriptor(
+    '        HTMLInputElement.prototype, 'value'
+    '    ).set;
+
+    '    setter.call(input, '" & price & "');
+    '    input.dispatchEvent(new Event('input', { bubbles: true }));
+    '    input.dispatchEvent(new Event('change', { bubbles: true }));
+
+    '    return 'ok';
+    '})();
+    '"
+
+    '    Await wv.CoreWebView2.ExecuteScriptAsync(js)
+
+    'End Sub
+
+    'Private Async Sub SelectTemplate(wv As Microsoft.Web.WebView2.Wpf.WebView2, templateName As String)
+
+    '    Dim js As String =
+    '"
+    '(async function(){
+
+    '    // 1. Find Template button
+    '    let btn = [...document.querySelectorAll('button')]
+    '        .find(b => b.innerText.includes('Select a template'));
+
+    '    if (!btn) return 'template-button-not-found';
+
+    '    btn.click();
+
+    '    // 2. Wait for dropdown
+    '    await new Promise(r => setTimeout(r, 800));
+
+    '    // 3. Click template option
+    '    let item = [...document.querySelectorAll('[role=menuitem],[role=option]')]
+    '        .find(el => el.innerText.trim() === '" & templateName & "');
+
+    '    if (!item) return 'template-item-not-found';
+
+    '    item.click();
+    '    return 'ok';
+    '})();
+    '"
+
+    '    Await wv.CoreWebView2.ExecuteScriptAsync(js)
+
+    'End Sub
+
 
     Private Sub LoadDataGrid()
         Dim sFieldList As String
@@ -2922,10 +3111,10 @@ Class MainWindow
             txtCrmlsPassword.Text = GetNodeValue(loginElement.Element("CRMLS"), "Password")
             txtPrivyUser.Text = GetNodeValue(loginElement.Element("PRIVY"), "UserName")
             txtPrivyPassword.Text = GetNodeValue(loginElement.Element("PRIVY"), "Password")
-            txtPipeUser.Text = GetNodeValue(loginElement.Element("PIPE"), "UserName")
-            txtPipePassword.Text = GetNodeValue(loginElement.Element("PIPE"), "Password")
-            txtPipeApiKey.Text = GetNodeValue(loginElement.Element("PIPE"), "Api")
-            txtPipeCompanyName.Text = GetNodeValue(loginElement.Element("PIPE"), "Company")
+            'txtPipeUser.Text = GetNodeValue(loginElement.Element("PIPE"), "UserName")
+            'txtPipePassword.Text = GetNodeValue(loginElement.Element("PIPE"), "Password")
+            'txtPipeApiKey.Text = GetNodeValue(loginElement.Element("PIPE"), "Api")
+            'txtPipeCompanyName.Text = GetNodeValue(loginElement.Element("PIPE"), "Company")
 
             ' Load MLS Status
             Dim mlsStatusElement = loginElement.Element("MLSStatus")
@@ -2992,10 +3181,10 @@ Class MainWindow
             SetNodeValue(loginElement.Element("CRMLS"), "Password", txtCrmlsPassword.Text)
             SetNodeValue(loginElement.Element("PRIVY"), "UserName", txtPrivyUser.Text)
             SetNodeValue(loginElement.Element("PRIVY"), "Password", txtPrivyPassword.Text)
-            SetNodeValue(loginElement.Element("PIPE"), "UserName", txtPipeUser.Text)
-            SetNodeValue(loginElement.Element("PIPE"), "Password", txtPipePassword.Text)
-            SetNodeValue(loginElement.Element("PIPE"), "Api", txtPipeApiKey.Text)
-            SetNodeValue(loginElement.Element("PIPE"), "Company", txtPipeCompanyName.Text)
+            'SetNodeValue(loginElement.Element("PIPE"), "UserName", txtPipeUser.Text)
+            'SetNodeValue(loginElement.Element("PIPE"), "Password", txtPipePassword.Text)
+            'SetNodeValue(loginElement.Element("PIPE"), "Api", txtPipeApiKey.Text)
+            'SetNodeValue(loginElement.Element("PIPE"), "Company", txtPipeCompanyName.Text)
 
 
             ' Save MLS Status
@@ -3087,42 +3276,42 @@ Class MainWindow
     End Sub
 
     Public Async Function PipedriveGetStageIDsandNames() As Task
-        Dim apiToken As String = txtPipeApiKey.Text
-        Dim companyDomain As String = txtPipeCompanyName.Text
+        'Dim apiToken As String = txtPipeApiKey.Text
+        'Dim companyDomain As String = txtPipeCompanyName.Text
 
         ' Construct the API endpoint for stages
-        Dim url As String = $"https://{companyDomain}.pipedrive.com/api/v1/stages?api_token={apiToken}"
-        Try
-            Dim jsonResponse As String = Await PipedriveFetchApiJsonAsync(url)
-            Dim stagesResponse As PipedriveStagesResponse = JsonConvert.DeserializeObject(Of PipedriveStagesResponse)(jsonResponse)
+        'Dim url As String = $"https://{companyDomain}.pipedrive.com/api/v1/stages?api_token={apiToken}"
+        'Try
+        '    Dim jsonResponse As String = Await PipedriveFetchApiJsonAsync(url)
+        '    Dim stagesResponse As PipedriveStagesResponse = JsonConvert.DeserializeObject(Of PipedriveStagesResponse)(jsonResponse)
 
-            If stagesResponse IsNot Nothing AndAlso stagesResponse.success AndAlso stagesResponse.data IsNot Nothing Then
-                For Each stage As StageData In stagesResponse.data
-                    ' Prepare the SQLite UPSERT statement
-                    ' Note: The table 'PipeDriveStages' should have a PRIMARY KEY constraint on the 'id' column for INSERT OR REPLACE to work as an upsert.
-                    Dim sql As String = "INSERT OR REPLACE INTO PipeDriveStages (id, name, order_nr) VALUES (@id, @name, @order_nr)"
-                    Dim SQLitecmd As New SQLiteCommand(sql)
-                    SQLitecmd.Parameters.AddWithValue("@id", stage.id)
-                    SQLitecmd.Parameters.AddWithValue("@name", stage.name)
-                    SQLitecmd.Parameters.AddWithValue("@order_nr", stage.order_nr)
-                    fxCommon.SQLExecuteCommand(SQLitecmd)
-                Next
-                'MessageBox.Show("Pipedrive stages updated successfully!")
-            Else
-                MessageBox.Show("Failed to retrieve stages from Pipedrive API.")
-            End If
-        Catch ex As Net.Http.HttpRequestException
-            MessageBox.Show($"HTTP Request Error: {ex.Message}")
-        Catch ex As System.Exception
-            MessageBox.Show($"An error occurred: {ex.Message}")
-        End Try
+        '    If stagesResponse IsNot Nothing AndAlso stagesResponse.success AndAlso stagesResponse.data IsNot Nothing Then
+        '        For Each stage As StageData In stagesResponse.data
+        '            ' Prepare the SQLite UPSERT statement
+        '            ' Note: The table 'PipeDriveStages' should have a PRIMARY KEY constraint on the 'id' column for INSERT OR REPLACE to work as an upsert.
+        '            Dim sql As String = "INSERT OR REPLACE INTO PipeDriveStages (id, name, order_nr) VALUES (@id, @name, @order_nr)"
+        '            Dim SQLitecmd As New SQLiteCommand(sql)
+        '            SQLitecmd.Parameters.AddWithValue("@id", stage.id)
+        '            SQLitecmd.Parameters.AddWithValue("@name", stage.name)
+        '            SQLitecmd.Parameters.AddWithValue("@order_nr", stage.order_nr)
+        '            fxCommon.SQLExecuteCommand(SQLitecmd)
+        '        Next
+        '        'MessageBox.Show("Pipedrive stages updated successfully!")
+        '    Else
+        '        MessageBox.Show("Failed to retrieve stages from Pipedrive API.")
+        '    End If
+        'Catch ex As Net.Http.HttpRequestException
+        '    MessageBox.Show($"HTTP Request Error: {ex.Message}")
+        'Catch ex As System.Exception
+        '    MessageBox.Show($"An error occurred: {ex.Message}")
+        'End Try
     End Function
 
     ' Fetches deals from Pipedrive and updates Property table with pdDealID, pdStageID, pdStageName using fxCommon.SQLExecuteReader/SQLExecuteCommand
     Public Async Function PipedriveSyncDealsDataToPropertyTable() As Task
         ' Load config.json for API key and domain
-        Dim apiToken As String = txtPipeApiKey.Text
-        Dim companyDomain As String = txtPipeCompanyName.Text
+        'Dim apiToken As String = txtPipeApiKey.Text
+        'Dim companyDomain As String = txtPipeCompanyName.Text
 
         ' Fetch all stages from SQLite using fxCommon.SQLExecuteReader
         Dim stageDict As New Dictionary(Of Integer, String)
@@ -3133,80 +3322,80 @@ Class MainWindow
         Next
 
         ' Fetch deals from Pipedrive
-        Dim dealsUrl = $"https://{companyDomain}.pipedrive.com/api/v2/deals?api_token={apiToken}&limit=500" '&status=open"
-        Dim dealsJson As String = Await PipedriveFetchApiJsonAsync(dealsUrl)
-        Dim dealsObj = Newtonsoft.Json.Linq.JObject.Parse(dealsJson)
-        If Not (dealsObj("success") IsNot Nothing AndAlso dealsObj("success").ToObject(Of Boolean)) Then
-            MessageBox.Show("Failed to fetch deals from Pipedrive.")
-            Return
-        End If
+        'Dim dealsUrl = $"https://{companyDomain}.pipedrive.com/api/v2/deals?api_token={apiToken}&limit=500" '&status=open"
+        'Dim dealsJson As String = Await PipedriveFetchApiJsonAsync(dealsUrl)
+        'Dim dealsObj = Newtonsoft.Json.Linq.JObject.Parse(dealsJson)
+        'If Not (dealsObj("success") IsNot Nothing AndAlso dealsObj("success").ToObject(Of Boolean)) Then
+        '    MessageBox.Show("Failed to fetch deals from Pipedrive.")
+        '    Return
+        'End If
 
-        Dim deals = dealsObj("data")
-        If deals Is Nothing Then
-            MessageBox.Show("No deals found.")
-            Return
-        End If
+        'Dim deals = dealsObj("data")
+        'If deals Is Nothing Then
+        '    MessageBox.Show("No deals found.")
+        '    Return
+        'End If
 
         ' Update Property table using fxCommon.SQLExecuteCommand
         Dim iUpdateCount As Integer = 0
-        For Each deal In deals
-            Dim mlsId = deal("custom_fields")?("7924752563aef8a024ee2aa6d623ba6ed145c142")?.ToString()
-            Dim stageId = deal("stage_id")?.ToObject(Of Integer)()
-            Dim pdId = deal("id")?.ToString()
-            Dim pdStatus = deal("status")?.ToString()
-            If String.IsNullOrEmpty(mlsId) OrElse stageId Is Nothing OrElse String.IsNullOrEmpty(pdId) Then
-                Continue For
-            End If
-            Dim stageName As String = ""
-            If stageDict.ContainsKey(stageId) Then
-                stageName = stageDict(stageId)
-            End If
+        'For Each deal In deals
+        '    Dim mlsId = deal("custom_fields")?("7924752563aef8a024ee2aa6d623ba6ed145c142")?.ToString()
+        '    Dim stageId = deal("stage_id")?.ToObject(Of Integer)()
+        '    Dim pdId = deal("id")?.ToString()
+        '    Dim pdStatus = deal("status")?.ToString()
+        '    If String.IsNullOrEmpty(mlsId) OrElse stageId Is Nothing OrElse String.IsNullOrEmpty(pdId) Then
+        '        Continue For
+        '    End If
+        '    Dim stageName As String = ""
+        '    If stageDict.ContainsKey(stageId) Then
+        '        stageName = stageDict(stageId)
+        '    End If
 
-            ' Update Property table (fxCommon.SQLExecuteCommand)
-            Dim updateSql As String = "UPDATE Property SET pdDealID=@pdDealID, pdStageID=@pdStageID, pdStageName=@pdStageName WHERE MLSListingID=@MLSListingID"
-            Dim SQLitecmd As New SQLite.SQLiteCommand(updateSql)
-            SQLitecmd.Parameters.AddWithValue("@pdDealID", pdId)
-            SQLitecmd.Parameters.AddWithValue("@pdStageID", stageId.ToString())
-            SQLitecmd.Parameters.AddWithValue("@pdStageName", stageName)
-            SQLitecmd.Parameters.AddWithValue("@MLSListingID", mlsId)
-            Dim rowsAffected As Integer = fxCommon.SQLExecuteCommand(SQLitecmd)
+        '    ' Update Property table (fxCommon.SQLExecuteCommand)
+        '    Dim updateSql As String = "UPDATE Property SET pdDealID=@pdDealID, pdStageID=@pdStageID, pdStageName=@pdStageName WHERE MLSListingID=@MLSListingID"
+        '    Dim SQLitecmd As New SQLite.SQLiteCommand(updateSql)
+        '    SQLitecmd.Parameters.AddWithValue("@pdDealID", pdId)
+        '    SQLitecmd.Parameters.AddWithValue("@pdStageID", stageId.ToString())
+        '    SQLitecmd.Parameters.AddWithValue("@pdStageName", stageName)
+        '    SQLitecmd.Parameters.AddWithValue("@MLSListingID", mlsId)
+        '    Dim rowsAffected As Integer = fxCommon.SQLExecuteCommand(SQLitecmd)
 
-            If rowsAffected = 0 Then
-                ' Insert new record with as many details as possible from the deal JSON
-                Dim insertSql As String = "INSERT INTO Property (MLSListingID, pdDealID, pdStageID, pdStageName, Seller, SellerEmail, SellerPhone, LACell, LADirect, SavedAddress, OfferPrice, ARV, ListPrice, ClosePrice, SqFt, Status) " &
-                                             "VALUES (@MLSListingID, @pdDealID, @pdStageID, @pdStageName, @Seller, @SellerEmail, @SellerPhone, @LACell, @LADirect, @SavedAddress, @OfferPrice, @ARV, @ListPrice, @ClosePrice, @SqFt, @Status)"
-                Dim insertCmd As New SQLite.SQLiteCommand(insertSql)
-                insertCmd.Parameters.AddWithValue("@MLSListingID", mlsId)
-                insertCmd.Parameters.AddWithValue("@pdDealID", pdId)
-                insertCmd.Parameters.AddWithValue("@pdStageID", stageId.ToString())
-                insertCmd.Parameters.AddWithValue("@pdStageName", stageName)
+        '    If rowsAffected = 0 Then
+        '        ' Insert new record with as many details as possible from the deal JSON
+        '        Dim insertSql As String = "INSERT INTO Property (MLSListingID, pdDealID, pdStageID, pdStageName, Seller, SellerEmail, SellerPhone, LACell, LADirect, SavedAddress, OfferPrice, ARV, ListPrice, ClosePrice, SqFt, Status) " &
+        '                                     "VALUES (@MLSListingID, @pdDealID, @pdStageID, @pdStageName, @Seller, @SellerEmail, @SellerPhone, @LACell, @LADirect, @SavedAddress, @OfferPrice, @ARV, @ListPrice, @ClosePrice, @SqFt, @Status)"
+        '        Dim insertCmd As New SQLite.SQLiteCommand(insertSql)
+        '        insertCmd.Parameters.AddWithValue("@MLSListingID", mlsId)
+        '        insertCmd.Parameters.AddWithValue("@pdDealID", pdId)
+        '        insertCmd.Parameters.AddWithValue("@pdStageID", stageId.ToString())
+        '        insertCmd.Parameters.AddWithValue("@pdStageName", stageName)
 
-                insertCmd.Parameters.AddWithValue("@Seller", pdGetSafeStringValue(deal, "455b5e163c481fde5281cde7f39ebfd19c15abc0"))
-                insertCmd.Parameters.AddWithValue("@SellerEmail", pdGetSafeStringValue(deal, "0eddebbc40f548e8d347f4c51a1d6e1e0147a2c3"))
-                insertCmd.Parameters.AddWithValue("@SellerPhone", pdGetSafeStringValue(deal, "d88f20459b047449f41455f5a2306138f729efce"))
-                insertCmd.Parameters.AddWithValue("@SavedAddress", pdGetSafeStringValue(deal, "8033e63c4bfc1b97dd915f424da9c4401d65d34b"))
-                insertCmd.Parameters.AddWithValue("@OfferPrice", pdGetMoneyValue(deal, "782c0afe87597d97347ead892c1d8d71371d2515"))
-                insertCmd.Parameters.AddWithValue("@ARV", pdGetMoneyValue(deal, "5ea31681a33100a1e935015e9482c65a168e5e5b"))
-                insertCmd.Parameters.AddWithValue("@ListPrice", pdGetMoneyValue(deal, "0654fc92dfa67f1c8801866d94c10c49c1835c3d"))
-                insertCmd.Parameters.AddWithValue("@ClosePrice", pdGetMoneyValue(deal, "60489922d1c93011cf367b3ff2e24a0d9834122e"))
-                insertCmd.Parameters.AddWithValue("@SqFt", pdGetSafeStringValue(deal, "12466f54cf2399bab32a4a7d3ccf60939d27ee2d"))
-                insertCmd.Parameters.AddWithValue("@Status", pdGetSafeStringValue(deal, "1452ff29b9a430f6ed4fa34d03bc3976e8c8310e"))
+        '        insertCmd.Parameters.AddWithValue("@Seller", pdGetSafeStringValue(deal, "455b5e163c481fde5281cde7f39ebfd19c15abc0"))
+        '        insertCmd.Parameters.AddWithValue("@SellerEmail", pdGetSafeStringValue(deal, "0eddebbc40f548e8d347f4c51a1d6e1e0147a2c3"))
+        '        insertCmd.Parameters.AddWithValue("@SellerPhone", pdGetSafeStringValue(deal, "d88f20459b047449f41455f5a2306138f729efce"))
+        '        insertCmd.Parameters.AddWithValue("@SavedAddress", pdGetSafeStringValue(deal, "8033e63c4bfc1b97dd915f424da9c4401d65d34b"))
+        '        insertCmd.Parameters.AddWithValue("@OfferPrice", pdGetMoneyValue(deal, "782c0afe87597d97347ead892c1d8d71371d2515"))
+        '        insertCmd.Parameters.AddWithValue("@ARV", pdGetMoneyValue(deal, "5ea31681a33100a1e935015e9482c65a168e5e5b"))
+        '        insertCmd.Parameters.AddWithValue("@ListPrice", pdGetMoneyValue(deal, "0654fc92dfa67f1c8801866d94c10c49c1835c3d"))
+        '        insertCmd.Parameters.AddWithValue("@ClosePrice", pdGetMoneyValue(deal, "60489922d1c93011cf367b3ff2e24a0d9834122e"))
+        '        insertCmd.Parameters.AddWithValue("@SqFt", pdGetSafeStringValue(deal, "12466f54cf2399bab32a4a7d3ccf60939d27ee2d"))
+        '        insertCmd.Parameters.AddWithValue("@Status", pdGetSafeStringValue(deal, "1452ff29b9a430f6ed4fa34d03bc3976e8c8310e"))
 
-                insertCmd.Parameters.AddWithValue("@LACell", pdGetSafeStringValue(deal, "4dab1f2310bc4c53db7a82410560807b76b7bc44"))
-                insertCmd.Parameters.AddWithValue("@LADirect", pdGetSafeStringValue(deal, "941df5800d43c6bb7b598d5782784912fabc960c"))
-                '----
-                fxCommon.SQLExecuteCommand(insertCmd)
-            End If
-        Next
+        '        insertCmd.Parameters.AddWithValue("@LACell", pdGetSafeStringValue(deal, "4dab1f2310bc4c53db7a82410560807b76b7bc44"))
+        '        insertCmd.Parameters.AddWithValue("@LADirect", pdGetSafeStringValue(deal, "941df5800d43c6bb7b598d5782784912fabc960c"))
+        '        '----
+        '        fxCommon.SQLExecuteCommand(insertCmd)
+        '    End If
+        'Next
 
         MessageBox.Show("Pipedrive deals synced to Property table.")
     End Function
 
     ' Add a note to a Pipedrive deal
     Public Async Function PipedriveAddNotesToDeal(dealId As Integer, noteContent As String) As Task
-        Dim apiToken As String = txtPipeApiKey.Text
-        Dim companyDomain As String = txtPipeCompanyName.Text
-        Dim url As String = $"https://{companyDomain}.pipedrive.com/api/v1/notes?api_token={apiToken}"
+        'Dim apiToken As String = txtPipeApiKey.Text
+        'Dim companyDomain As String = txtPipeCompanyName.Text
+        'Dim url As String = $"https://{companyDomain}.pipedrive.com/api/v1/notes?api_token={apiToken}"
 
         Dim data As New Dictionary(Of String, Object) From {
             {"deal_id", dealId},
@@ -3214,21 +3403,21 @@ Class MainWindow
         }
         Using client As New Net.Http.HttpClient()
             Dim content As New Net.Http.StringContent(Newtonsoft.Json.JsonConvert.SerializeObject(data), System.Text.Encoding.UTF8, "application/json")
-            Dim response = Await client.PostAsync(url, content)
-            If response.IsSuccessStatusCode Then
-                'MessageBox.Show("Note added successfully.")
-            Else
-                MessageBox.Show($"Failed to add note: {response.StatusCode}" & vbCrLf & Await response.Content.ReadAsStringAsync())
-            End If
+            'Dim response = Await client.PostAsync(url, content)
+            'If response.IsSuccessStatusCode Then
+            '    'MessageBox.Show("Note added successfully.")
+            'Else
+            '    MessageBox.Show($"Failed to add note: {response.StatusCode}" & vbCrLf & Await response.Content.ReadAsStringAsync())
+            'End If
         End Using
     End Function
 
     ' Update a Pipedrive deal's status and/or stage_id
     Public Async Function PipedriveUpdateDealStatusAndStage(dealId As Integer, Optional status As String = Nothing, Optional stageId As Integer = Nothing) As Task
         ' Load API key and domain from config.json
-        Dim apiToken As String = txtPipeApiKey.Text
-        Dim companyDomain As String = txtPipeCompanyName.Text
-        Dim url As String = $"https://{companyDomain}.pipedrive.com/api/v2/deals/{dealId}?api_token={apiToken}"
+        'Dim apiToken As String = txtPipeApiKey.Text
+        'Dim companyDomain As String = txtPipeCompanyName.Text
+        'Dim url As String = $"https://{companyDomain}.pipedrive.com/api/v2/deals/{dealId}?api_token={apiToken}"
         Dim data As New Dictionary(Of String, Object)()
 
         If Not String.IsNullOrEmpty(status) Then data("status") = status
@@ -3239,19 +3428,19 @@ Class MainWindow
         End If
         Using client As New Net.Http.HttpClient()
             Dim content As New Net.Http.StringContent(Newtonsoft.Json.JsonConvert.SerializeObject(data), System.Text.Encoding.UTF8, "application/json")
-            Dim response = Await client.PatchAsync(url, content)
-            If response.IsSuccessStatusCode Then
-                'MessageBox.Show("Deal updated successfully.")
-            Else
-                MessageBox.Show($"Failed to update deal: {response.StatusCode}" & vbCrLf & Await response.Content.ReadAsStringAsync())
-            End If
+            'Dim response = Await client.PatchAsync(url, content)
+            'If response.IsSuccessStatusCode Then
+            '    'MessageBox.Show("Deal updated successfully.")
+            'Else
+            '    MessageBox.Show($"Failed to update deal: {response.StatusCode}" & vbCrLf & Await response.Content.ReadAsStringAsync())
+            'End If
         End Using
     End Function
 
     ' Add or update a contact (person) in Pipedrive and return the person id. Optionally link to organization.
     Public Async Function PipeDriveAddPersonContact(name As String, email As String, Optional phone1 As String = Nothing, Optional phone2 As String = Nothing, Optional phone3 As String = Nothing, Optional organization As Integer? = Nothing) As Task(Of Integer?)
-        Dim apiToken As String = txtPipeApiKey.Text
-        Dim companyDomain As String = txtPipeCompanyName.Text
+        'Dim apiToken As String = txtPipeApiKey.Text
+        'Dim companyDomain As String = txtPipeCompanyName.Text
         Dim personId As Integer? = Await PipeDriveSearchPersonByEmail(email)
         Dim phones As New List(Of Object)()
         If Not String.IsNullOrEmpty(phone1) Then phones.Add(New With {.value = phone1, .label = "work"})
@@ -3266,93 +3455,93 @@ Class MainWindow
         Using client As New Net.Http.HttpClient()
             If personId.HasValue Then
                 ' Update existing
-                Dim updateUrl = $"https://{companyDomain}.pipedrive.com/api/v1/persons/{personId}?api_token={apiToken}"
+                'Dim updateUrl = $"https://{companyDomain}.pipedrive.com/api/v1/persons/{personId}?api_token={apiToken}"
                 Dim content = New Net.Http.StringContent(Newtonsoft.Json.JsonConvert.SerializeObject(data), System.Text.Encoding.UTF8, "application/json")
-                Dim response = Await client.PutAsync(updateUrl, content)
-                If response.IsSuccessStatusCode Then
-                    MessageBox.Show($"Person already exists. Updated. ID: {personId}")
-                    Return personId
-                Else
-                    MessageBox.Show($"Failed to update person: {response.StatusCode}" & vbCrLf & Await response.Content.ReadAsStringAsync())
-                    Return Nothing
-                End If
+                'Dim response = Await client.PutAsync(updateUrl, content)
+                'If response.IsSuccessStatusCode Then
+                '    MessageBox.Show($"Person already exists. Updated. ID: {personId}")
+                '    Return personId
+                'Else
+                '    MessageBox.Show($"Failed to update person: {response.StatusCode}" & vbCrLf & Await response.Content.ReadAsStringAsync())
+                '    Return Nothing
+                'End If
             Else
                 ' Add new
-                Dim addUrl = $"https://{companyDomain}.pipedrive.com/api/v1/persons?api_token={apiToken}"
+                'Dim addUrl = $"https://{companyDomain}.pipedrive.com/api/v1/persons?api_token={apiToken}"
                 Dim content = New Net.Http.StringContent(Newtonsoft.Json.JsonConvert.SerializeObject(data), System.Text.Encoding.UTF8, "application/json")
-                Dim response = Await client.PostAsync(addUrl, content)
-                If response.IsSuccessStatusCode Then
-                    Dim respStr = Await response.Content.ReadAsStringAsync()
-                    Dim respObj = Newtonsoft.Json.Linq.JObject.Parse(respStr)
-                    Dim newId = respObj("data")?("id")
-                    MessageBox.Show($"Person added successfully. ID: {newId}")
-                    Return If(newId IsNot Nothing, newId.ToObject(Of Integer)(), Nothing)
-                Else
-                    MessageBox.Show($"Failed to add person: {response.StatusCode}" & vbCrLf & Await response.Content.ReadAsStringAsync())
-                    Return Nothing
-                End If
+                'Dim response = Await client.PostAsync(addUrl, content)
+                'If response.IsSuccessStatusCode Then
+                '    Dim respStr = Await response.Content.ReadAsStringAsync()
+                '    Dim respObj = Newtonsoft.Json.Linq.JObject.Parse(respStr)
+                '    Dim newId = respObj("data")?("id")
+                '    MessageBox.Show($"Person added successfully. ID: {newId}")
+                '    Return If(newId IsNot Nothing, newId.ToObject(Of Integer)(), Nothing)
+                'Else
+                '    MessageBox.Show($"Failed to add person: {response.StatusCode}" & vbCrLf & Await response.Content.ReadAsStringAsync())
+                '    Return Nothing
+                'End If
             End If
         End Using
     End Function
 
     ' Search for a person by email. Returns person id if found, else Nothing.
     Public Async Function PipeDriveSearchPersonByEmail(email As String) As Task(Of Integer?)
-        Dim apiToken As String = txtPipeApiKey.Text
-        Dim companyDomain As String = txtPipeCompanyName.Text
-        Dim url As String = $"https://{companyDomain}.pipedrive.com/api/v1/persons/search?api_token={apiToken}&term={email}&fields=email&exact_match=true"
+        'Dim apiToken As String = txtPipeApiKey.Text
+        'Dim companyDomain As String = txtPipeCompanyName.Text
+        'Dim url As String = $"https://{companyDomain}.pipedrive.com/api/v1/persons/search?api_token={apiToken}&term={email}&fields=email&exact_match=true"
 
         Using client As New Net.Http.HttpClient()
-            Dim response = Await client.GetAsync(url)
-            If response.IsSuccessStatusCode Then
-                Dim respStr = Await response.Content.ReadAsStringAsync()
-                Dim respObj = Newtonsoft.Json.Linq.JObject.Parse(respStr)
-                Dim items = respObj("data")?("items")
-                If items IsNot Nothing AndAlso items.HasValues AndAlso items.Count > 0 Then
-                    Return items(0)("item")("id").ToObject(Of Integer)()
-                Else
-                    Return Nothing
-                End If
-            Else
-                MessageBox.Show($"Failed to search for person: {response.StatusCode}")
-                Return Nothing
-            End If
+            'Dim response = Await client.GetAsync(url)
+            'If response.IsSuccessStatusCode Then
+            '    Dim respStr = Await response.Content.ReadAsStringAsync()
+            '    Dim respObj = Newtonsoft.Json.Linq.JObject.Parse(respStr)
+            '    Dim items = respObj("data")?("items")
+            '    If items IsNot Nothing AndAlso items.HasValues AndAlso items.Count > 0 Then
+            '        Return items(0)("item")("id").ToObject(Of Integer)()
+            '    Else
+            '        Return Nothing
+            '    End If
+            'Else
+            '    MessageBox.Show($"Failed to search for person: {response.StatusCode}")
+            '    Return Nothing
+            'End If
         End Using
     End Function
 
     ' Get list of emails related to a person id from Pipedrive.
     Public Async Function PipeDriveGetPersonEmails(personId As Integer) As Task(Of List(Of JObject))
-        Dim apiToken As String = txtPipeApiKey.Text
-        Dim companyDomain As String = txtPipeCompanyName.Text
-        Dim url As String = $"https://{companyDomain}.pipedrive.com/api/v1/persons/{personId}/mailMessages?api_token={apiToken}"
+        'Dim apiToken As String = txtPipeApiKey.Text
+        'Dim companyDomain As String = txtPipeCompanyName.Text
+        'Dim url As String = $"https://{companyDomain}.pipedrive.com/api/v1/persons/{personId}/mailMessages?api_token={apiToken}"
 
         Using client As New Net.Http.HttpClient()
-            Dim response = Await client.GetAsync(url)
-            If response.IsSuccessStatusCode Then
-                Dim respStr = Await response.Content.ReadAsStringAsync()
-                Dim respObj = Newtonsoft.Json.Linq.JObject.Parse(respStr)
-                Dim emails = respObj("data")
-                If emails Is Nothing OrElse Not emails.HasValues Then
-                    MessageBox.Show($"No emails found for person {personId}.")
-                    Return New List(Of JObject)()
-                End If
-                Dim result As New List(Of JObject)()
-                For Each email In emails
-                    result.Add(email)
-                Next
-                MessageBox.Show($"Found {result.Count} emails for person {personId}.")
-                Return result
-            Else
-                MessageBox.Show($"Failed to get emails: {response.StatusCode}" & vbCrLf & Await response.Content.ReadAsStringAsync())
-                Return New List(Of JObject)()
-            End If
+            'Dim response = Await client.GetAsync(url)
+            'If response.IsSuccessStatusCode Then
+            '    Dim respStr = Await response.Content.ReadAsStringAsync()
+            '    Dim respObj = Newtonsoft.Json.Linq.JObject.Parse(respStr)
+            '    Dim emails = respObj("data")
+            '    If emails Is Nothing OrElse Not emails.HasValues Then
+            '        MessageBox.Show($"No emails found for person {personId}.")
+            '        Return New List(Of JObject)()
+            '    End If
+            '    Dim result As New List(Of JObject)()
+            '    For Each email In emails
+            '        result.Add(email)
+            '    Next
+            '    MessageBox.Show($"Found {result.Count} emails for person {personId}.")
+            '    Return result
+            'Else
+            '    MessageBox.Show($"Failed to get emails: {response.StatusCode}" & vbCrLf & Await response.Content.ReadAsStringAsync())
+            '    Return New List(Of JObject)()
+            'End If
         End Using
     End Function
 
     ' Links email threads to deals if the email subject contains the property address
     Public Async Function PipeDriveMapEmailThreadsUsingPersonIds() As Task
         ' 1. Get all properties with pdPersonID and SavedAddress and pdDealID
-        Dim apiToken As String = txtPipeApiKey.Text
-        Dim companyDomain As String = txtPipeCompanyName.Text
+        'Dim apiToken As String = txtPipeApiKey.Text
+        'Dim companyDomain As String = txtPipeCompanyName.Text
         Dim dtProperties As System.Data.DataTable = fxCommon.SQLExecuteReader("SELECT MLSListingID, SavedAddress, pdPersonID, pdDealID FROM Property WHERE pdPersonID IS NOT NULL AND pdPersonID <> '' AND pdDealID IS NOT NULL AND pdDealID <> '' AND SavedAddress IS NOT NULL AND SavedAddress <> ''")
         If dtProperties.Rows.Count = 0 Then
             MessageBox.Show("No properties with pdPersonID and pdDealID found.")
@@ -3366,62 +3555,62 @@ Class MainWindow
                 If String.IsNullOrEmpty(personId) OrElse String.IsNullOrEmpty(dealId) OrElse String.IsNullOrEmpty(address) Then Continue For
 
                 ' 2. Get emails for this person
-                Dim url As String = $"https://{companyDomain}.pipedrive.com/api/v1/persons/{personId}/mailMessages?api_token={apiToken}"
-                Dim response = Await client.GetAsync(url)
-                If Not response.IsSuccessStatusCode Then Continue For
-                Dim respStr = Await response.Content.ReadAsStringAsync()
-                Dim respObj = Newtonsoft.Json.Linq.JObject.Parse(respStr)
-                Dim emails = respObj("data")
-                If emails Is Nothing OrElse Not emails.HasValues Then Continue For
-                For Each email In emails
-                    Dim data = email("data")
-                    If data Is Nothing Then Continue For
-                    Dim subject As String = If(data("subject") IsNot Nothing, data("subject").ToString(), "")
-                    Dim threadId As String = If(data("mail_thread_id") IsNot Nothing, data("mail_thread_id").ToString(), "")
-                    If String.IsNullOrEmpty(subject) OrElse String.IsNullOrEmpty(threadId) Then Continue For
+                'Dim url As String = $"https://{companyDomain}.pipedrive.com/api/v1/persons/{personId}/mailMessages?api_token={apiToken}"
+                'Dim response = Await client.GetAsync(url)
+                'If Not response.IsSuccessStatusCode Then Continue For
+                'Dim respStr = Await response.Content.ReadAsStringAsync()
+                'Dim respObj = Newtonsoft.Json.Linq.JObject.Parse(respStr)
+                'Dim emails = respObj("data")
+                '                If emails Is Nothing OrElse Not emails.HasValues Then Continue For
+                '                For Each email In emails
+                '                    Dim data = email("data")
+                '                    If data Is Nothing Then Continue For
+                '                    Dim subject As String = If(data("subject") IsNot Nothing, data("subject").ToString(), "")
+                '                    Dim threadId As String = If(data("mail_thread_id") IsNot Nothing, data("mail_thread_id").ToString(), "")
+                '                    If String.IsNullOrEmpty(subject) OrElse String.IsNullOrEmpty(threadId) Then Continue For
 
-                    ' 3. If subject contains address, link thread to deal
-                    If subject.ToLower().Contains(address.ToLower()) Then
-                        ' Check if already linked in Property table
-                        Dim checkSql = "SELECT pdEmailThreadID FROM Property WHERE pdDealID=@dealId"
-                        Dim checkCmd As New SQLite.SQLiteCommand(checkSql)
-                        checkCmd.Parameters.AddWithValue("@dealId", dealId)
-                        Dim existingThreadId As Object = fxCommon.SQLExecuteCommand(checkCmd)
-                        If existingThreadId IsNot Nothing AndAlso Not IsDBNull(existingThreadId) AndAlso existingThreadId.ToString() = threadId Then
-                            ' Already linked, skip
-                            Continue For
-                        End If
+                '                    ' 3. If subject contains address, link thread to deal
+                '                    If subject.ToLower().Contains(address.ToLower()) Then
+                '                        ' Check if already linked in Property table
+                '                        Dim checkSql = "SELECT pdEmailThreadID FROM Property WHERE pdDealID=@dealId"
+                '                        Dim checkCmd As New SQLite.SQLiteCommand(checkSql)
+                '                        checkCmd.Parameters.AddWithValue("@dealId", dealId)
+                '                        Dim existingThreadId As Object = fxCommon.SQLExecuteCommand(checkCmd)
+                '                        If existingThreadId IsNot Nothing AndAlso Not IsDBNull(existingThreadId) AndAlso existingThreadId.ToString() = threadId Then
+                '                            ' Already linked, skip
+                '                            Continue For
+                '                        End If
 
-                        ' Link thread to deal using endpoint: PUT /api/v1/mailbox/mailThreads/{threadId}/deal/{dealId}?api_token=xxx
-                        ' 1. Form the correct URL, which only contains the threadId in the path.
-                        '    The api_token is a query parameter, which is correct.
-                        Dim linkUrl = $"https://{companyDomain}.pipedrive.com/api/v1/mailbox/mailThreads/{threadId}?api_token={apiToken}"
+                '                        ' Link thread to deal using endpoint: PUT /api/v1/mailbox/mailThreads/{threadId}/deal/{dealId}?api_token=xxx
+                '                        ' 1. Form the correct URL, which only contains the threadId in the path.
+                '                        '    The api_token is a query parameter, which is correct.
+                '                        'Dim linkUrl = $"https://{companyDomain}.pipedrive.com/api/v1/mailbox/mailThreads/{threadId}?api_token={apiToken}"
 
-                        ' 2. Create a JSON payload for the request body.
-                        '    The API expects the deal_id to be in the request body, not the URL.
-                        Dim payload As Object = New With {
-    .deal_id = dealId
-}
+                '                        ' 2. Create a JSON payload for the request body.
+                '                        '    The API expects the deal_id to be in the request body, not the URL.
+                '                        Dim payload As Object = New With {
+                '    .deal_id = dealId
+                '}
 
-                        ' 3. Serialize the payload to a StringContent object.
-                        Dim jsonPayload As String = JsonConvert.SerializeObject(payload)
-                        Dim content As New StringContent(jsonPayload, Encoding.UTF8, "application/json")
+                '                        ' 3. Serialize the payload to a StringContent object.
+                '                        Dim jsonPayload As String = JsonConvert.SerializeObject(payload)
+                '                        Dim content As New StringContent(jsonPayload, Encoding.UTF8, "application/json")
 
-                        ' 4. Make the PUT request with the correct URL and content.
-                        Dim linkResp = Await client.PutAsync(linkUrl, content)
-                        If linkResp.IsSuccessStatusCode Then
-                            MessageBox.Show($"Linked thread {threadId} to deal {dealId} for address '{address}'")
-                            ' Optionally update Property table with thread id
-                            Dim updateSql = "UPDATE Property SET pdEmailThreadID=@threadId WHERE pdDealID=@dealId"
-                            Dim SQLitecmd As New SQLite.SQLiteCommand(updateSql)
-                            SQLitecmd.Parameters.AddWithValue("@threadId", threadId)
-                            SQLitecmd.Parameters.AddWithValue("@dealId", dealId)
-                            fxCommon.SQLExecuteCommand(SQLitecmd)
-                        Else
-                            MessageBox.Show($"Failed to link thread {threadId} to deal {dealId}: {linkResp.StatusCode}")
-                        End If
-                    End If
-                Next
+                '                        ' 4. Make the PUT request with the correct URL and content.
+                '                        Dim linkResp = Await client.PutAsync(linkUrl, content)
+                '                        If linkResp.IsSuccessStatusCode Then
+                '                            MessageBox.Show($"Linked thread {threadId} to deal {dealId} for address '{address}'")
+                '                            ' Optionally update Property table with thread id
+                '                            Dim updateSql = "UPDATE Property SET pdEmailThreadID=@threadId WHERE pdDealID=@dealId"
+                '                            Dim SQLitecmd As New SQLite.SQLiteCommand(updateSql)
+                '                            SQLitecmd.Parameters.AddWithValue("@threadId", threadId)
+                '                            SQLitecmd.Parameters.AddWithValue("@dealId", dealId)
+                '                            fxCommon.SQLExecuteCommand(SQLitecmd)
+                '                        Else
+                '                            MessageBox.Show($"Failed to link thread {threadId} to deal {dealId}: {linkResp.StatusCode}")
+                '                        End If
+                '                    End If
+                '                Next
             Next
         End Using
         MessageBox.Show("Email thread mapping completed.")
