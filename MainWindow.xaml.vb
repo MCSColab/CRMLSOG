@@ -47,6 +47,10 @@ Class MainWindow
     Private newWindowHeight As Double
     Public FlagAutoStatusChangeEmailsEnabled As Boolean = False
     Private LastOfferPrice As String = ""
+    Private CurrentPropertyAddress As String = ""
+    Private LastExtractedAddress As String = ""
+    Private LastSentAddressToOfferGun As String = ""
+
 
     Private Sub CurrentDomain_UnhandledException(ByVal sender As Object, ByVal e As UnhandledExceptionEventArgs)
         Dim exception As Exception = CType(e.ExceptionObject, Exception)
@@ -583,6 +587,8 @@ Class MainWindow
         If url.Contains("https://signin.crmls.org/account/login") Then
             SiteLogin(CoreWV)
             bCodeProcessing = True
+        ElseIf url.Contains("https://matrix.crmls.org/matrix/results.aspx") Then
+            Await ExtractMatrixAddress(CoreWV)
         ElseIf url.Contains("https://matrix.crmls.org/matrix/default.aspx") AndAlso MLSListingStatus IsNot String.Empty Then
             Await CoreWV.ExecuteScriptAsync("document.getElementById('ctl02_m_ucSpeedBar_m_tbSpeedBar').value = '" & MLSListingStatus & "';")
             Threading.Thread.Sleep(200)
@@ -592,15 +598,15 @@ Class MainWindow
             Await GetStatusData(CoreWV)
         ElseIf url.Contains("https://app.privy.pro/users/sign_in") Then
             privylogin(CoreWV)
-        ElseIf url.Contains("https://app.pipedrive.com/auth/login") Then
+            'ElseIf url.Contains("https://app.pipedrive.com/auth/login") Then
             'pipelogin(CoreWV)
         ElseIf url.Contains("https://www.offergun.com/login") Then
             offergunlogin(CoreWV)
 
-        ElseIf url.Contains("https://www.offergun.com/generate") Then
+        End If
+        If url.Contains("https://www.offergun.com/generate") Then
             Await OfferGunAutoFill()
-            Exit Sub
-
+            Await UpdateOfferGunAddress()
         End If
     End Sub
     Private Async Function OfferGunAutoFill() As Task
@@ -658,6 +664,72 @@ Class MainWindow
     ")
 
     End Function
+    Private Async Function ExtractMatrixAddress(CoreWV As CoreWebView2) As Task
+        Try
+            Dim result As String = Await CoreWV.ExecuteScriptAsync(
+        "
+        (function(){
+            let el = document.querySelector('span.d-mega');
+            if(!el) return null;
+            let t = el.innerText.trim();
+            return t === '' ? null : t;
+        })();
+        ")
+
+            If String.IsNullOrWhiteSpace(result) OrElse result = "null" Then Exit Function
+
+            ' Remove JS string quotes
+            result = result.Trim(""""c)
+
+            ' Update only if changed
+            If result <> LastExtractedAddress Then
+                LastExtractedAddress = result
+                CurrentPropertyAddress = result
+
+                ' Optional: reflect in UI
+                Dispatcher.Invoke(Sub()
+                                      txtAddressSearch.Text = CurrentPropertyAddress
+                                  End Sub)
+                Await UpdateOfferGunAddress()
+            End If
+
+        Catch ex As system.Exception
+            ' swallow errors safely
+        End Try
+    End Function
+
+    Private Async Function UpdateOfferGunAddress() As Task
+
+        If WebViewog.CoreWebView2 Is Nothing Then Exit Function
+
+        Dim url = WebViewog.Source?.ToString().ToLower()
+        If url Is Nothing OrElse Not url.Contains("offergun.com/generate") Then Exit Function
+
+        Dim addr As String = CurrentPropertyAddress
+        If String.IsNullOrWhiteSpace(addr) Then Exit Function
+
+        ' Prevent unnecessary re-injection
+        If addr = LastSentAddressToOfferGun Then Exit Function
+        LastSentAddressToOfferGun = addr
+
+        Await WebViewog.CoreWebView2.ExecuteScriptAsync(
+    "
+    (function(){
+        let i = document.getElementById('search');
+        if(!i) return;
+
+        let setter = Object.getOwnPropertyDescriptor(
+            HTMLInputElement.prototype,'value'
+        ).set;
+
+        setter.call(i, `" & addr.Replace("`", "\`") & "`);
+        i.dispatchEvent(new Event('input', { bubbles:true }));
+        i.dispatchEvent(new Event('change', { bubbles:true }));
+    })();
+    ")
+
+    End Function
+
 
 
 
@@ -671,6 +743,8 @@ Class MainWindow
 
             If url.Contains("https://signin.crmls.org/account/login") Then
                 SiteLogin(CoreWV)
+
+
 
             ElseIf url.Contains("https://matrix.crmls.org/matrix/results.aspx") AndAlso MLSListingSub IsNot String.Empty AndAlso MLSListingMain Is String.Empty Then
                 strJScript = "var links = document.getElementsByTagName('a');var searchText = '" & MLSListingSub & "';for (var i = 0; i < links.length; i++) {if (links[i].innerText === searchText) {links[i].click();break;}}"
