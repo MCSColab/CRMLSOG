@@ -137,8 +137,8 @@
             <Label Content="Offer Price " Width="110" Height="25" Grid.Row="1" HorizontalAlignment="Center" />
             <TextBox Name="txtPrice" Width="100" Height="20" Grid.Row="2" HorizontalAlignment="Center" PreviewTextInput="txtPrice_PreviewTextInput" LostFocus="txtPrice_LostFocus" Style="{StaticResource TextBoxStyle}" />
 
-            <Label Content="ARV " Width="110" Height="25" Grid.Row="3" HorizontalAlignment="Center" />
-            <TextBox Name="txtARVPrice" Width="100" Height="20" Grid.Row="4" HorizontalAlignment="Center" PreviewTextInput="txtPrice_PreviewTextInput" LostFocus="txtPrice_LostFocus" Style="{StaticResource TextBoxStyle}" TextChanged="txtPrice_TextChanged" />
+            <!--<Label Content="ARV " Width="110" Height="25" Grid.Row="3" HorizontalAlignment="Center" />-->
+            <!--<TextBox Name="txtARVPrice" Width="100" Height="20" Grid.Row="4" HorizontalAlignment="Center" PreviewTextInput="txtPrice_PreviewTextInput" LostFocus="txtPrice_LostFocus" Style="{StaticResource TextBoxStyle}" TextChanged="txtPrice_TextChanged" />-->
 
             <ComboBox Name="cmbEmailTemplate" Width="100" Height="25" Grid.Row="5" HorizontalAlignment="Center" Style="{StaticResource ComboBoxStyle}" />
             <ComboBox Name="cmbEmailAccount" SelectionChanged="cmbEmailAccount_SelectionChanged"  Width="100" Height="25" Grid.Row="6" HorizontalAlignment="Center" Style="{StaticResource ComboBoxStyle}" />
@@ -160,6 +160,33 @@
             <TabControl Name="TabControlMain" Grid.Row="0" Grid.Column="0" 
                         PreviewMouseDown="TabControlMain_PreviewMouseDown"
                         SelectionChanged="TabControlMain_SelectionChanged">
+                
+                <TabItem  Name="tabOG2" Header="Leads">
+                    <Grid Background="#E5E5E5">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                        </Grid.RowDefinitions>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="138*"/>
+                            <ColumnDefinition Width="11*"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+
+                        <!-- Navigation Buttons -->
+                        <Grid HorizontalAlignment="Center" VerticalAlignment="Center" >
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="30.76"/>
+                                <ColumnDefinition Width="53.76"/>
+                            </Grid.ColumnDefinitions>
+                        </Grid>
+                        <!-- WebView -->
+                        <Wpf:WebView2 Name="WebViewog2" Grid.Row="1" Grid.ColumnSpan="4" Margin="10,5,10,10"/>
+                    </Grid>
+                </TabItem>
                 <TabItem Name="tabMain" Header="Main"  >
                     <Grid Background="#E5E5E5">
                         <Grid.RowDefinitions>
@@ -285,6 +312,7 @@
                                 <Button Padding="10,0,10,1" Content="&lt;" Margin="5,5,5,5" Style="{StaticResource ButtonStyle}" Click="btnCompBack_Click"/>
                                 <Button Padding="10,0,10,1" Content="&gt;" Margin="5,5,5,5" Style="{StaticResource ButtonStyle}" Click="btnCompFwd_Click"/>
                                 <Button Content="Drag" Name="btnTabAnalyze" Click="btnTabAnalyze_Click" Style="{StaticResource ButtonStyle}" Margin="3,5" />
+                                <Button Name="btnOGAddress" Height="25" Content="Copy Address" Click="btnOGanalyse_Click" Style="{StaticResource ButtonStyle}" Grid.Column="4" Margin="10,5"/>
                             </StackPanel>
                         </Grid>
 
@@ -589,32 +617,6 @@
                     </Grid>
                 </TabItem>
 
-                <TabItem  Name="tabOG2" Header="Leads">
-                    <Grid Background="#E5E5E5">
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height="Auto"/>
-                            <RowDefinition Height="*"/>
-                        </Grid.RowDefinitions>
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="Auto"/>
-                            <ColumnDefinition Width="138*"/>
-                            <ColumnDefinition Width="11*"/>
-                            <ColumnDefinition Width="*"/>
-                        </Grid.ColumnDefinitions>
-
-                        <!-- Navigation Buttons -->
-                        <Grid HorizontalAlignment="Center" VerticalAlignment="Center" >
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="Auto"/>
-                                <ColumnDefinition Width="Auto"/>
-                                <ColumnDefinition Width="30.76"/>
-                                <ColumnDefinition Width="53.76"/>
-                            </Grid.ColumnDefinitions>
-                        </Grid>
-                        <!-- WebView -->
-                        <Wpf:WebView2 Name="WebViewog2" Grid.Row="1" Grid.ColumnSpan="4" Margin="10,5,10,10"/>
-                    </Grid>
-                </TabItem>
 
                 <TabItem  Name="tabPrivy" Header="Privy"  >
                     <Grid Background="#E5E5E5">
@@ -647,7 +649,7 @@
                 </TabItem>
 
                 <!-- Add this TabItem to your existing TabControl in MainWindow.xaml -->
-                <TabItem Name="tabSettings" Header="Settings" GotFocus="tabSettings_GotFocus">
+                <TabItem Name="tabSettings" Header="Settings" >
                     <Grid Background="#F0F0F0">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="371*"/>
@@ -809,12 +811,12 @@
                     </Grid>
                 </TabItem>
 
-                <!--<TabItem Header="Email" Margin="-2,0,-2,0">
+                <TabItem Header="Email" Margin="-2,0,-2,0">
                     <Grid Name="GridEmail" Background="#FFE5E5E5">
                         <Grid.ColumnDefinitions>
-                            -->
-                <!-- Adjusted column widths -->
-                <!--
+                            
+                 <!--Adjusted column widths--> 
+                
                             <ColumnDefinition Width="85"/>
                             <ColumnDefinition Width="20"/>
                             <ColumnDefinition Width="35.2"/>
@@ -833,33 +835,33 @@
                             <RowDefinition Height="413"/>
                         </Grid.RowDefinitions>
 
-                        -->
-                <!-- Email Type Radio Buttons -->
-                <!--
+                        
+                 <!--Email Type Radio Buttons--> 
+                
                         <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Grid.Column="1" Visibility="Visible" Grid.ColumnSpan="3" Height="14">
                             <RadioButton Name="rdoMessage" GroupName="rdoEmailType" Checked="rdoEmailType_Checked" Margin="20,0,25,0">Message</RadioButton>
                             <RadioButton Name="rdoCollaboration" GroupName="rdoEmailType" Checked="rdoEmailType_Checked"  Margin="2,0,25,0">Offers</RadioButton>
                             <RadioButton Name="rdoStatusUpdate" GroupName="rdoEmailType" Checked="rdoEmailType_Checked">AutoUpdates</RadioButton>
                         </StackPanel>
 
-                        -->
-                <!-- Labels for Messages -->
-                <!--
+                        
+                 <!--Labels for Messages--> 
+                
                         <Label Name="lblMessage1" Grid.Row="1" Grid.Column="3" Margin="65,5,100,5"/>
                         <Label Name="lblMessage2" Grid.Row="1" Grid.Column="4" Margin="100,5,100,5"/>
                         <Label Name="lblMessage3" Grid.Row="1" Grid.Column="5" Margin="100,5,100,5"/>
 
-                        -->
-                <!-- Subject Labels and TextBoxes -->
-                <!--
+                        
+                 <!--Subject Labels and TextBoxes--> 
+                
                         <Label Name="lblSubject0" Content="Subject" Width="100" Height="30" Grid.Row="2" Grid.Column="0" HorizontalAlignment="Left" VerticalAlignment="Top" Grid.ColumnSpan="2"/>
                         <TextBox Name="txtEmailSubject1" Width="300" Height="20" HorizontalAlignment="Left" VerticalAlignment="Top" Grid.Row="2" Grid.Column="2" Grid.ColumnSpan="2"/>
                         <TextBox Name="txtEmailSubject2" Width="300" Height="20" HorizontalAlignment="Left" VerticalAlignment="Top" Grid.Row="2" Grid.Column="4"/>
                         <TextBox Name="txtEmailSubject3" Width="300" Height="20" HorizontalAlignment="Left" VerticalAlignment="Top" Grid.Row="2" Grid.Column="5"/>
 
-                        -->
-                <!-- Attachment Labels and Browse Buttons -->
-                <!--
+                        
+                 <!--Attachment Labels and Browse Buttons--> 
+                
                         <Label Name="lblEmailAttach" Content="Attachment" Width="100" Height="30" Grid.Row="3" Grid.Column="0" HorizontalAlignment="Left" VerticalAlignment="Top" Grid.ColumnSpan="2"/>
                         <Label Name="lblEmailAttach1" Content="Attachment1" Width="320" Height="48" Grid.Row="3" Grid.Column="2" HorizontalAlignment="Left" VerticalAlignment="Top" Grid.ColumnSpan="2"/>
                         <StackPanel Height="35" Orientation="Horizontal" VerticalAlignment="Center" Grid.Row="4" Grid.Column="2" Grid.ColumnSpan="2">
@@ -874,9 +876,9 @@
                             <Button x:Name="btnEmailBrowse3" Style="{StaticResource ButtonStyle}" Content="Browse" Click="btnEmailBrowse1_Click" Width="80" Height="25"/>
                         </StackPanel>
 
-                        -->
-                <!-- Email Message TextBoxes -->
-                <!--
+                        
+                 <!--Email Message TextBoxes--> 
+                
                         <Label Name="lblEmailMessage" Content="Message" Width="200" Height="30" Grid.Row="5" Grid.Column="0" HorizontalAlignment="Left" VerticalAlignment="Top" Grid.ColumnSpan="4"/>
                         <TextBox Name="txtEmailMessage1" Width="300" Height="300" HorizontalAlignment="Left" VerticalAlignment="Center" Grid.Row="5" Grid.Column="2"
  AcceptsReturn="True" TextWrapping="Wrap" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto" Grid.ColumnSpan="2"/>
@@ -885,9 +887,9 @@
                         <TextBox Name="txtEmailMessage3" Width="300" Height="300" HorizontalAlignment="Left" VerticalAlignment="Center" Grid.Row="5" Grid.Column="5"
  AcceptsReturn="True" TextWrapping="Wrap" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto"/>
 
-                        -->
-                <!-- Buttons for Email and SMS Temp Save -->
-                <!--
+                        
+                 <!--Buttons for Email and SMS Temp Save--> 
+                
                         <Button Name="btnEmailTempSave" Click="btnEmailTempSave_Click" Content="Save" Width="100" Height="30" Grid.Row="6" Grid.Column="4" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="0,46,0,0"/>
                         <Label Name="lblSMSMessage" Content="SMS" Width="75" Height="30" Grid.Row="6" Grid.Column="0" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="0,20,0,0"/>
 
@@ -897,13 +899,13 @@
                             </Border>
                         </StackPanel>
 
-                        -->
-                <!-- TextBox for SMS Message -->
-                <!--
+                        
+                 <!--TextBox for SMS Message--> 
+                
                         <TextBox x:Name="txtSMSMessage1" AcceptsReturn="True" TextWrapping="Wrap" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto" Grid.Column="2" Margin="0,11,100,40" Grid.Row="6" Grid.ColumnSpan="2"/>
                     </Grid>
                 </TabItem>
-                <TabItem Header="Logs" Margin="-2,0,-2,0">
+                <!--<TabItem Header="Logs" Margin="-2,0,-2,0">
                     <Grid Name="GridLog" Background="#FFE5E5E5">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*"/>

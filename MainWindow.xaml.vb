@@ -321,23 +321,71 @@ Class MainWindow
         RemoveHandler WebViewComp.CoreWebView2.WebMessageReceived, AddressOf WebView_WebMessageReceived
     End Sub
 
-    Private Sub privylogin(CoreWV As CoreWebView2)
-        Dim xmlDoc As New XmlDocument()
-        xmlDoc.Load(_settingsFilePath)
-        Dim userNameNode As XmlNode = xmlDoc.SelectSingleNode("/Login/PRIVY/UserName")
-        Dim passwordNode As XmlNode = xmlDoc.SelectSingleNode("/Login/PRIVY/Password")
-        If userNameNode IsNot Nothing AndAlso passwordNode IsNot Nothing Then
-            Dim userName As String = userNameNode.InnerText
-            Dim password As String = passwordNode.InnerText
+    Private Async Sub privylogin(CoreWV As CoreWebView2)
+
+        Try
+            Dim xmlDoc As New XmlDocument()
+            xmlDoc.Load(_settingsFilePath)
+
+            Dim userNameNode = xmlDoc.SelectSingleNode("/Login/PRIVY/UserName")
+            Dim passwordNode = xmlDoc.SelectSingleNode("/Login/PRIVY/Password")
+
+            If userNameNode Is Nothing OrElse passwordNode Is Nothing Then
+                SystemSounds.Exclamation.Play()
+                MessageBox.Show("Username or Password is missing in Login.xml for PRIVY")
+                Exit Sub
+            End If
+
+            Dim userName As String = JsEscape(userNameNode.InnerText)
+            Dim password As String = JsEscape(passwordNode.InnerText)
+
             bCodeProcessing = False
-            CoreWV.ExecuteScriptAsync("document.getElementById('user_email').value = '" & userName & "';")
-            CoreWV.ExecuteScriptAsync("document.getElementById('user_password').value = '" & password & "';")
-            CoreWV.ExecuteScriptAsync("document.getElementById('login_button').click();")
-        Else
+
+            ' STEP 1: Enter email and click login
+            Await CoreWV.ExecuteScriptAsync(
+            $"document.getElementById('user_email').value = '{userName}';"
+        )
+
+            Await CoreWV.ExecuteScriptAsync(
+            "document.getElementById('login_button').click();"
+        )
+
+            ' WAIT for password-only page to load
+            Await Task.Delay(2000) ' adjust if needed
+
+            ' STEP 2: Enter password and login
+            Dim pwdScript As String =
+$"
+(function() {{
+    const pwd = document.getElementById('user_password');
+    const btn = document.getElementById('login_button');
+
+    if (!pwd) {{
+        console.log('Password field not found');
+        return;
+    }}
+
+    pwd.focus();
+    pwd.value = '{password}';
+    pwd.dispatchEvent(new Event('input', {{ bubbles: true }}));
+    pwd.dispatchEvent(new Event('change', {{ bubbles: true }}));
+
+    if (btn) btn.click();
+}})();
+"
+
+            Await CoreWV.ExecuteScriptAsync(pwdScript)
+
+        Catch ex As system.Exception
             SystemSounds.Exclamation.Play()
-            MessageBox.Show("Username or Password is missing in the Login.xml for PRIVY")
-        End If
+            MessageBox.Show("Privy login failed." & vbCrLf & ex.Message)
+        End Try
+
     End Sub
+    Private Function JsEscape(value As String) As String
+        Return value.Replace("\", "\\").Replace("'", "\'")
+    End Function
+
     Private Function offergunlogin(CoreWV As CoreWebView2)
         Dim xmlDoc As New XmlDocument()
         xmlDoc.Load(_settingsFilePath)
@@ -1326,7 +1374,7 @@ $"(async function(){{
         Dim offerPrice As String
         Dim arvPrice As String
         offerPrice = txtPrice.Text
-        arvPrice = txtARVPrice.Text
+        'arvPrice = txtARVPrice.Text
 
         If (email) Then
             Dim selMLSListingID As New List(Of String)
@@ -1336,7 +1384,7 @@ $"(async function(){{
             If (selMLSListingID.Count > 0) Then
                 Dim Response As String = fxCommon.SendEmails(selMLSListingID, offerPrice, emailTemplate)
                 txtPrice.Text = String.Empty
-                txtARVPrice.Text = String.Empty
+                'txtARVPrice.Text = String.Empty
                 '''If TabControlMain.SelectedIndex < 2 Then
                 '''LoadDataGrid()
                 '''End If
@@ -1382,7 +1430,7 @@ $"(async function(){{
         Dim offerPrice As String
         Dim arvPrice As String
         offerPrice = txtPrice.Text
-        arvPrice = txtARVPrice.Text
+        'arvPrice = txtARVPrice.Text
 
         If TabControlMain.SelectedIndex = 0 Then
             sHtml = Await WebViewMain.CoreWebView2.ExecuteScriptAsync("document.documentElement.outerHTML")
@@ -1666,7 +1714,7 @@ $"(async function(){{
                         If (message = "1") Then
                             message = "Property [" & SavedAddress & "] - Added to Opportunities/PipeDrive"
                             txtPrice.Text = String.Empty
-                            txtARVPrice.Text = String.Empty
+                            'txtARVPrice.Text = String.Empty
                             Await PipeDriveUpload(MLSListingID)
                         Else
                             message = "Record not saved."
@@ -1702,7 +1750,7 @@ $"(async function(){{
             If (selMLSListingID.Count > 0) Then
                 Dim Response As String = fxCommon.SendEmails(selMLSListingID, offerPrice, emailTemplate)
                 txtPrice.Text = String.Empty
-                txtARVPrice.Text = String.Empty
+                'txtARVPrice.Text = String.Empty
                 'If TabControlMain.SelectedIndex < 2 Then
                 'LoadDataGrid()
                 'End If
@@ -1941,38 +1989,55 @@ $"(async function(){{
     End Sub
     Private Async Sub btnCompGoListingfromPrivy_Click(sender As Object, e As RoutedEventArgs)
         Try
-            Dim sHtml As String = Await WebViewPrivy.CoreWebView2.ExecuteScriptAsync("document.documentElement.outerHTML")
-            Dim sHtmlDecoded As String = System.Text.RegularExpressions.Regex.Unescape(sHtml)
-            Dim aHTML As New HtmlAgilityPack.HtmlDocument()
-            Dim searchAddress As String
-            aHTML.LoadHtml(sHtmlDecoded)
-
-            Dim addressNode As HtmlAgilityPack.HtmlNode = aHTML.DocumentNode.SelectSingleNode("//div[@class='address']")
-            If addressNode IsNot Nothing Then
-                Dim addressLine1Node As HtmlAgilityPack.HtmlNode = addressNode.SelectSingleNode(".//h1[@class='address-line1']")
-                Dim addressLine2Node As HtmlAgilityPack.HtmlNode = addressNode.SelectSingleNode(".//div[@class='address-line2']")
-                Dim addressLine1 As String = If(addressLine1Node IsNot Nothing, addressLine1Node.InnerText.Trim(), "")
-                Dim addressLine2 As String = If(addressLine2Node IsNot Nothing, addressLine2Node.InnerText.Trim(), "")
-
-                Try
-                    searchAddress = (addressLine1 & " " & addressLine2).Replace(vbCr, "").Replace(vbLf, "")
-                    searchAddress = searchAddress.Replace("  ", " ")
-                    bCodeProcessing = True
-                    TabControlMain.SelectedIndex = 1
-                    txtAddressSearch.Text = searchAddress
-                    btnAddressSearch.RaiseEvent(New RoutedEventArgs(System.Windows.Controls.Button.ClickEvent))
-                Catch ex As System.Exception
-                    searchAddress = String.Empty
-                End Try
+            ' Ensure CoreWebView2 is ready
+            If WebViewPrivy.CoreWebView2 Is Nothing Then
+                Await WebViewPrivy.EnsureCoreWebView2Async()
             End If
-        Catch ex As System.Exception
+
+            ' Give Privy page time to render address
+            Await Task.Delay(1500)
+
+            Dim script As String =
+"
+(function(){
+    let line1 = document.querySelector('h1.address-line1');
+    let line2 = document.querySelector('div.address-line2');
+
+    if(!line1) return null;
+
+    let a1 = line1.innerText.trim();
+    let a2 = line2 ? line2.innerText.trim() : '';
+
+    let addr = (a1 + ' ' + a2).replace(/\s+/g,' ').trim();
+    return addr === '' ? null : addr;
+})();
+"
+
+            Dim result As String = Await WebViewPrivy.CoreWebView2.ExecuteScriptAsync(script)
+
+            If String.IsNullOrWhiteSpace(result) OrElse result = "null" Then
+                MessageBox.Show("Property Address not found.")
+                Exit Sub
+            End If
+
+            ' Remove JS quotes safely
+            Dim searchAddress As String =
+            System.Text.Json.JsonSerializer.Deserialize(Of String)(result)
+
+            bCodeProcessing = True
+            TabControlMain.SelectedIndex = 2
+            txtAddressSearch.Text = searchAddress
+            btnAddressSearch.RaiseEvent(New RoutedEventArgs(System.Windows.Controls.Button.ClickEvent))
+
+        Catch ex As system.Exception
             SystemSounds.Exclamation.Play()
-            MessageBox.Show("Exception. Property Address not found.")
+            MessageBox.Show("Exception while extracting Privy address." & vbCrLf & ex.Message)
         End Try
     End Sub
+
     Private Async Sub btnCompGoListingfromMain_Click(sender As Object, e As RoutedEventArgs)
         Try
-            If TabControlMain.SelectedIndex = 0 Then
+            If TabControlMain.SelectedIndex = 1 Then
                 Dim sHtml As String = Await WebViewMain.CoreWebView2.ExecuteScriptAsync("document.documentElement.outerHTML")
                 Dim sHtmlDecoded As String = System.Text.RegularExpressions.Regex.Unescape(sHtml)
                 Dim aHTML As New HtmlAgilityPack.HtmlDocument()
@@ -1987,7 +2052,7 @@ $"(async function(){{
                             searchAddress = String.Empty
                         End Try
                         bCodeProcessing = True
-                        TabControlMain.SelectedIndex = 1
+                        TabControlMain.SelectedIndex = 2
                         txtAddressSearch.Text = searchAddress
                         btnAddressSearch.RaiseEvent(New RoutedEventArgs(System.Windows.Controls.Button.ClickEvent))
                     End If
@@ -2014,7 +2079,7 @@ $"(async function(){{
             End If
 
             ' Switch to OfferGun tab ONLY when address exists
-            TabControlMain.SelectedIndex = 2   ' OfferGun tab index
+            TabControlMain.SelectedIndex = 3   ' OfferGun tab index
 
             ' Small delay to ensure WebView is visible
             Await Task.Delay(500)
@@ -2028,6 +2093,37 @@ $"(async function(){{
         End Try
 
     End Sub
+    Private Async Sub btnOGanalyse_Click(sender As Object, e As RoutedEventArgs)
+
+        Try
+            ' Ensure Matrix WebView is ready
+            If WebViewComp.CoreWebView2 Is Nothing Then Exit Sub
+
+            ' Try extracting address from current Matrix page
+            Await ExtractMatrixAddress(WebViewComp.CoreWebView2)
+
+            ' If still empty, extraction failed → stay on page
+            If String.IsNullOrWhiteSpace(CurrentPropertyAddress) Then
+                MessageBox.Show("Property address not found on this page.")
+                Exit Sub
+            End If
+
+            ' Switch to OfferGun tab ONLY when address exists
+            TabControlMain.SelectedIndex = 3   ' OfferGun tab index
+
+            ' Small delay to ensure WebView is visible
+            Await Task.Delay(500)
+
+            ' Populate OfferGun address input
+            Await UpdateOfferGunAddress()
+
+        Catch ex As System.Exception
+            SystemSounds.Exclamation.Play()
+            MessageBox.Show("Failed to copy property address.")
+        End Try
+
+    End Sub
+
 
 
     ' Returns an empty string if the value is DBNull, otherwise returns the value as a string.
@@ -2392,27 +2488,27 @@ $"(async function(){{
 
     Private Function FindTextBoxByName(name As String) As System.Windows.Controls.TextBox
         Dim textBox As System.Windows.Controls.TextBox = Nothing
-        'Dim gridChildren As IEnumerable(Of UIElement) = LogicalTreeHelper.GetChildren(GridEmail).OfType(Of UIElement)()
+        Dim gridChildren As IEnumerable(Of UIElement) = LogicalTreeHelper.GetChildren(GridEmail).OfType(Of UIElement)()
 
-        'For Each child As UIElement In gridChildren
-        '    If TypeOf child Is System.Windows.Controls.TextBox AndAlso CType(child, System.Windows.Controls.TextBox).Name = name Then
-        '        textBox = CType(child, System.Windows.Controls.TextBox)
-        '        Exit For
-        '    End If
-        'Next
+        For Each child As UIElement In gridChildren
+            If TypeOf child Is System.Windows.Controls.TextBox AndAlso CType(child, System.Windows.Controls.TextBox).Name = name Then
+                textBox = CType(child, System.Windows.Controls.TextBox)
+                Exit For
+            End If
+        Next
 
         Return textBox
     End Function
     Private Function FindLabelByName(name As String) As System.Windows.Controls.Label
         Dim textBox As System.Windows.Controls.Label = Nothing
-        'Dim gridChildren As IEnumerable(Of UIElement) = LogicalTreeHelper.GetChildren(GridEmail).OfType(Of UIElement)()
+        Dim gridChildren As IEnumerable(Of UIElement) = LogicalTreeHelper.GetChildren(GridEmail).OfType(Of UIElement)()
 
-        'For Each child As UIElement In gridChildren
-        '    If TypeOf child Is System.Windows.Controls.Label AndAlso CType(child, System.Windows.Controls.Label).Name = name Then
-        '        textBox = CType(child, System.Windows.Controls.Label)
-        '        Exit For
-        '    End If
-        'Next
+        For Each child As UIElement In gridChildren
+            If TypeOf child Is System.Windows.Controls.Label AndAlso CType(child, System.Windows.Controls.Label).Name = name Then
+                textBox = CType(child, System.Windows.Controls.Label)
+                Exit For
+            End If
+        Next
 
         Return textBox
     End Function
@@ -3313,7 +3409,8 @@ $"(async function(){{
     Private Sub SaveSettings()
         Try
             If Not File.Exists(_settingsFilePath) Then
-                MessageBox.Show("Cannot save. Settings file not found: " & _settingsFilePath, "Error", MessageBoxButton.OK, MessageBoxImage.Error)
+                MessageBox.Show("Cannot save. Settings file not found: " & _settingsFilePath,
+                            "Error", MessageBoxButton.OK, MessageBoxImage.Error)
                 Return
             End If
 
@@ -3321,60 +3418,89 @@ $"(async function(){{
             Dim loginElement As XElement = xdoc.Element("Login")
 
             If loginElement Is Nothing Then
-                MessageBox.Show("Invalid XML structure. <Login> root element not found.", "Error", MessageBoxButton.OK, MessageBoxImage.Error)
+                MessageBox.Show("Invalid XML structure. <Login> not found.",
+                            "Error", MessageBoxButton.OK, MessageBoxImage.Error)
                 Return
             End If
 
-            ' Helper function to safely set a node's value.
-            ' This will create the XML element if it doesn't already exist.
-            Dim SetNodeValue = Sub(parent As XElement, childName As String, value As String)
-                                   If parent IsNot Nothing Then
-                                       Dim child = parent.Element(childName)
-                                       If child IsNot Nothing Then
-                                           child.Value = value
-                                       Else
-                                           parent.Add(New XElement(childName, value))
-                                       End If
-                                   End If
-                               End Sub
+            ' ==============================
+            ' HELPERS
+            ' ==============================
+            Dim GetOrCreate =
+            Function(parent As XElement, name As String) As XElement
+                Dim el = parent.Element(name)
+                If el Is Nothing Then
+                    el = New XElement(name)
+                    parent.Add(el)
+                End If
+                Return el
+            End Function
 
-            ' Save Credentials
-            SetNodeValue(loginElement.Element("CRMLS"), "UserName", txtCrmlsUser.Text)
-            SetNodeValue(loginElement.Element("CRMLS"), "Password", txtCrmlsPassword.Text)
-            SetNodeValue(loginElement.Element("PRIVY"), "UserName", txtPrivyUser.Text)
-            SetNodeValue(loginElement.Element("PRIVY"), "Password", txtPrivyPassword.Text)
-            'SetNodeValue(loginElement.Element("PIPE"), "UserName", txtPipeUser.Text)
-            'SetNodeValue(loginElement.Element("PIPE"), "Password", txtPipePassword.Text)
-            'SetNodeValue(loginElement.Element("PIPE"), "Api", txtPipeApiKey.Text)
-            'SetNodeValue(loginElement.Element("PIPE"), "Company", txtPipeCompanyName.Text)
+            Dim SetNodeValue =
+            Sub(parent As XElement, childName As String, value As String)
+                If parent Is Nothing Then Exit Sub
+                Dim child = parent.Element(childName)
+                If child Is Nothing Then
+                    parent.Add(New XElement(childName, value))
+                Else
+                    child.Value = value
+                End If
+            End Sub
 
+            ' ==============================
+            ' CREDENTIALS
+            ' ==============================
+            Dim crmls = GetOrCreate(loginElement, "CRMLS")
+            SetNodeValue(crmls, "UserName", txtCrmlsUser.Text.Trim())
+            SetNodeValue(crmls, "Password", txtCrmlsPassword.Text.Trim())
 
-            ' Save MLS Status
-            Dim mlsStatusElement = loginElement.Element("MLSStatus")
-            SetNodeValue(mlsStatusElement, "Active", txtMlsActive.Text)
-            SetNodeValue(mlsStatusElement, "Sold", txtMlsSold.Text)
-            SetNodeValue(mlsStatusElement, "Hold", txtMlsHold.Text)
-            SetNodeValue(mlsStatusElement, "Pending", txtMlsPending.Text)
-            SetNodeValue(mlsStatusElement, "Other", txtMlsOther.Text)
+            Dim privy = GetOrCreate(loginElement, "PRIVY")
+            SetNodeValue(privy, "UserName", txtPrivyUser.Text.Trim())
+            SetNodeValue(privy, "Password", txtPrivyPassword.Text.Trim())
 
-            ' Save MLS Settings
-            Dim mlsSettingsElement = loginElement.Element("MLSSETTINGS")
-            SetNodeValue(mlsSettingsElement, "Miles", txtMlsMiles.Text)
-            SetNodeValue(mlsSettingsElement, "Subcat", txtMlsSubcat.Text)
-            SetNodeValue(mlsSettingsElement, "Sqft", txtMlsSqft.Text)
+            ' ==============================
+            ' MLS STATUS
+            ' ==============================
+            Dim mlsStatus = GetOrCreate(loginElement, "MLSStatus")
+            SetNodeValue(mlsStatus, "Active", txtMlsActive.Text.Trim())
+            SetNodeValue(mlsStatus, "Sold", txtMlsSold.Text.Trim())
+            SetNodeValue(mlsStatus, "Hold", txtMlsHold.Text.Trim())
+            SetNodeValue(mlsStatus, "Pending", txtMlsPending.Text.Trim())
+            SetNodeValue(mlsStatus, "Other", txtMlsOther.Text.Trim())
 
-            ' Save MLS Settings
-            Dim mlsDefaultSettingsElement = loginElement.Element("DefaultsSettings")
-            FlagAutoStatusChangeEmailsEnabled = False
-            If chkAutoStatusChangeEmails.IsChecked Then FlagAutoStatusChangeEmailsEnabled = True
-            SetNodeValue(mlsDefaultSettingsElement, "EmailStatusChangeUpdates", FlagAutoStatusChangeEmailsEnabled)
+            ' ==============================
+            ' MLS SETTINGS
+            ' ==============================
+            Dim mlsSettings = GetOrCreate(loginElement, "MLSSETTINGS")
+            SetNodeValue(mlsSettings, "Miles", txtMlsMiles.Text.Trim())
+            SetNodeValue(mlsSettings, "Subcat", txtMlsSubcat.Text.Trim())
+            SetNodeValue(mlsSettings, "Sqft", txtMlsSqft.Text.Trim())
 
-            ' Save Default Email
-            SetNodeValue(loginElement, "DefaultEmailAccount", txtDefaultEmail.Text)
+            ' ==============================
+            ' DEFAULT SETTINGS
+            ' ==============================
+            Dim defaults = GetOrCreate(loginElement, "DefaultsSettings")
+            Dim autoMail As String =
+            If(chkAutoStatusChangeEmails.IsChecked = True, "True", "False")
+
+            SetNodeValue(defaults, "EmailStatusChangeUpdates", autoMail)
+
+            ' ==============================
+            ' DEFAULT EMAIL
+            ' ==============================
+            SetNodeValue(loginElement, "DefaultEmailAccount", txtDefaultEmail.Text.Trim())
+
+            ' ==============================
+            ' SAVE FILE
+            ' ==============================
             xdoc.Save(_settingsFilePath)
 
-        Catch ex As System.Exception
-            MessageBox.Show("Failed to save settings: " & ex.Message, "Error", MessageBoxButton.OK, MessageBoxImage.Error)
+            'MessageBox.Show("Settings saved successfully!",
+            '            "Success", MessageBoxButton.OK, MessageBoxImage.Information)
+
+        Catch ex As system.Exception
+            MessageBox.Show("Failed to save settings: " & ex.Message,
+                        "Error", MessageBoxButton.OK, MessageBoxImage.Error)
         End Try
     End Sub
 
