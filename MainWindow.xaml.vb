@@ -98,7 +98,7 @@ Class MainWindow
         WebViewog2.Source = New Uri("https://www.offergun.com/offer-history")
         'TabControlMain.SelectedIndex = 5
 
-        TabControlMain.SelectedIndex = 3
+        TabControlMain.SelectedIndex = 0
         cmbEmailAccount.ItemsSource = fxCommon.GetOutlookEmailAccounts()
         cmbEmailAccount.SelectedIndex = 0
         Dim xmlDoc As New XmlDocument()
@@ -3303,6 +3303,12 @@ $"(async function(){{
             MessageBox.Show("Failed to load settings: " & ex.Message, "Error", MessageBoxButton.OK, MessageBoxImage.Error)
         End Try
     End Sub
+    Private Sub tabSettings_SelectionChanged(sender As Object, e As SelectionChangedEventArgs)
+        If tabSettings.IsSelected Then
+            LoadSettings()
+        End If
+    End Sub
+
 
     Private Sub SaveSettings()
         Try

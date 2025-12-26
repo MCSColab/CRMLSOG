@@ -11,12 +11,6 @@
 	<UserName>eric.tghcapital@gmail.com</UserName>
 	<Password>24Hoursjack!!</Password>
   </OFFERGUN>
-  <PIPE>
-    <UserName>eric.tghcapital@gmail.com</UserName>
-    <Password>main1234</Password>
-    <Api>2b503ef3f01594688d3c8d7d2cbb72b060dd25ea</Api>
-    <Company>tghcapital</Company>
-  </PIPE>
   <MLSStatus>
     <Active>Active,A</Active>
     <Sold>Closed,S,Sold</Sold>
