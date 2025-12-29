@@ -50,6 +50,15 @@ Class MainWindow
     Private CurrentPropertyAddress As String = ""
     Private LastExtractedAddress As String = ""
     Private LastSentAddressToOfferGun As String = ""
+    Private CurrentListPrice As String
+    Private CurrentYearBuilt As String
+    Private CurrentParcelNumber As String
+    Private CurrentCounty As String
+
+    Private CurrentLAName As String
+    Private CurrentLACell As String
+    Private CurrentLAEmail As String
+    Private Currentbuildyr As String
 
 
     Private Sub CurrentDomain_UnhandledException(ByVal sender As Object, ByVal e As UnhandledExceptionEventArgs)
@@ -713,35 +722,151 @@ $"
     End Function
     Private Async Function ExtractMatrixAddress(CoreWV As CoreWebView2) As Task
         Try
-            Dim result As String = Await CoreWV.ExecuteScriptAsync(
-        "
-        (function(){
-            let el = document.querySelector('span.d-mega');
-            if(!el) return null;
-            let t = el.innerText.trim();
-            return t === '' ? null : t;
-        })();
-        ")
+            Dim js As String =
+        "(function () {
 
-            If String.IsNullOrWhiteSpace(result) OrElse result = "null" Then Exit Function
+            const clean = t => t ? t.replace(/\s+/g,' ').trim() : null;
 
-            ' Remove JS string quotes
-            result = result.Trim(""""c)
+            const result = {
+                address: null,
+                listPrice: null,
+                parcel: null,
+                county: null,
+                laName: null,
+                laCell: null,
+                laEmail: null
+            };
 
-            ' Update only if changed
-            If result <> LastExtractedAddress Then
-                LastExtractedAddress = result
-                CurrentPropertyAddress = result
+            /* ================= ADDRESS ================= */
+            const addr = document.querySelector('span.d-mega');
+            if (addr) result.address = clean(addr.innerText);
 
-                ' Optional: reflect in UI
+            /* ================= LIST PRICE ================= */
+            const lpLabel = [...document.querySelectorAll('span')]
+                .find(s => clean(s.innerText) === 'LIST PRICE:');
+            if (lpLabel) {
+                const priceSpan = lpLabel.parentElement.querySelector('span.wrapped-field');
+                if (priceSpan) result.listPrice = clean(priceSpan.innerText);
+            }
+
+            /* ================= PARCEL NUMBER ================= */
+let parcelLink = null;
+for (const a of document.querySelectorAll('a')) {
+    try {
+        if (a.getAttribute('href') &&
+            a.getAttribute('href').includes('thirdpartyformpost.aspx')) {
+            parcelLink = a;
+            break;
+        }
+    } catch(e) {}
+}
+if (parcelLink) result.parcel = clean(parcelLink.textContent);
+            /* ================= COUNTY ================= */
+            const countyLabel = [...document.querySelectorAll('span')]
+                .find(s => clean(s.innerText) === 'COUNTY:');
+            if (countyLabel) {
+                const countySpan = countyLabel.parentElement.querySelector('.wrapped-field');
+                if (countySpan) result.county = clean(countySpan.innerText);
+            }
+
+            /* ================= LA NAME ================= */
+            const laLabel = [...document.querySelectorAll('span')]
+                .find(s => clean(s.innerText) === 'LA:');
+            if (laLabel) {
+                const links = laLabel.parentElement.querySelectorAll('a');
+                if (links.length > 1) {
+                    result.laName = clean(links[1].innerText); // second link = name
+                }
+            }
+/* ================= PARCEL NUMBER ================= */
+let parcel = null;
+for (const span of document.querySelectorAll('span.wrapped-field')) {
+    const a = span.querySelector('a[href*=""thirdpartyformpost.aspx""]');
+    if (a && clean(a.innerText)) {
+        parcel = clean(a.innerText);
+        break;
+    }
+}
+if (parcel) result.parcel = parcel;
+/* ================= YEAR BUILT ================= */
+let yearBuilt = null;
+
+for (const td of document.querySelectorAll('td')) {
+    if (td.innerText.includes('YEAR BUILT')) {
+        const spans = td.querySelectorAll('span.formula.wrapped-field');
+        for (const s of spans) {
+            const val = clean(s.innerText);
+            if (/^\d{4}$/.test(val)) {   // ONLY year
+                yearBuilt = val;
+                break;
+            }
+        }
+        break;
+    }
+}
+if (yearBuilt) result.yearBuilt = yearBuilt;
+/* ================= LA CELL ================= */
+let laCell = null;
+
+for (const td of document.querySelectorAll('td')) {
+    const labelSpan = td.querySelector('span.formula.label');
+    if (!labelSpan) continue;
+
+    if (clean(labelSpan.innerText).includes('LA CELL')) {
+        const valueSpan = td.querySelector(
+            'span.formula.field:not(.label)'
+        );
+
+        if (valueSpan) {
+            laCell = clean(valueSpan.innerText);
+            break;
+        }
+    }
+}
+
+if (laCell) result.laCell = laCell;
+
+
+
+            /* ================= LA EMAIL ================= */
+            const emailLink = document.querySelector('a[href^=""mailto:""]');
+            if (emailLink) result.laEmail = clean(emailLink.innerText);
+
+            return JSON.stringify(result);
+        })();"
+
+            Dim raw As String = Await CoreWV.ExecuteScriptAsync(js)
+            If String.IsNullOrWhiteSpace(raw) OrElse raw = "null" Then Exit Function
+
+            ' JS → VB safe conversion
+            raw = raw.Trim(""""c)
+            raw = System.Text.RegularExpressions.Regex.Unescape(raw)
+
+            Dim data = System.Text.Json.JsonSerializer.Deserialize(Of Dictionary(Of String, String))(raw)
+            If data Is Nothing Then Exit Function
+
+            ' ================= STORE GLOBALLY =================
+            If Not String.IsNullOrWhiteSpace(data("address")) Then
+                LastExtractedAddress = data("address")
+                CurrentPropertyAddress = data("address")
+
+                CurrentListPrice = data("listPrice")
+                CurrentParcelNumber = data("parcel")
+                CurrentCounty = data("county")
+                CurrentLAName = data("laName")
+                CurrentLACell = data("laCell")
+                CurrentLAEmail = data("laEmail")
+                Currentbuildyr = data("yearBuilt")
+
                 Dispatcher.Invoke(Sub()
                                       txtAddressSearch.Text = CurrentPropertyAddress
                                   End Sub)
+
                 Await UpdateOfferGunAddress()
             End If
 
         Catch ex As System.Exception
-            ' swallow errors safely
+            fxCommon.GenerateLog(ex)
         End Try
     End Function
     Private Async Function UpdateOfferGunAddress() As Task
@@ -826,7 +951,7 @@ $"(async function(){{
                 LogMessage("UpdateOfferGunAddress failed: " & result)
             End If
 
-        Catch ex As system.Exception
+        Catch ex As System.Exception
             fxCommon.GenerateLog(ex)
         End Try
 
@@ -2063,6 +2188,122 @@ $"(async function(){{
             MessageBox.Show("Exception. Listing ID not exists.")
         End Try
     End Sub
+    Private Async Sub btnOGmanualEntry_Click(sender As Object, e As RoutedEventArgs)
+
+        Try
+            If WebViewog.CoreWebView2 Is Nothing Then Exit Sub
+            Dim price As String = CurrentListPrice
+            If Not String.IsNullOrWhiteSpace(price) Then
+                price = System.Text.RegularExpressions.Regex.Replace(price, "[^\d]", "")
+            End If
+
+            ' ================= 1. CLICK "Switch to Manual Entry" =================
+            Await WebViewog.CoreWebView2.ExecuteScriptAsync("
+            (function(){
+                var btns = document.querySelectorAll('button');
+                for (var i = 0; i < btns.length; i++) {
+                    if (btns[i].innerText.trim() === 'Switch to Manual Entry') {
+                        btns[i].click();
+                        return 'CLICKED';
+                    }
+                }
+                return 'NOT_FOUND';
+            })();
+        ")
+
+            ' wait for manual form to load
+            Await Task.Delay(1200)
+
+            ' ================= 2. SPLIT ADDRESS =================
+            Dim street As String = ""
+            Dim unit As String = ""
+            Dim city As String = ""
+            Dim state As String = ""
+            Dim zip As String = ""
+
+            Dim addrPattern As String =
+    "^(.*?)(?:\s+(?:Unit|Apt|#)\s*#?(\w+))?,\s*(.*?),\s*([A-Z]{2})\s*(\d{5})$"
+
+            Dim m = System.Text.RegularExpressions.Regex.Match(
+    CurrentPropertyAddress,
+    addrPattern,
+    System.Text.RegularExpressions.RegexOptions.IgnoreCase
+)
+
+            If m.Success Then
+                street = m.Groups(1).Value.Trim()
+                unit = m.Groups(2).Value.Trim()
+                city = m.Groups(3).Value.Trim()
+                state = m.Groups(4).Value.Trim()
+                zip = m.Groups(5).Value.Trim()
+            End If
+
+            ' ================= 3. POPULATE BASIC FIELDS =================
+            Await WebViewog.CoreWebView2.ExecuteScriptAsync($"
+            (function(){{
+                function setVal(id, val) {{
+                    var el = document.getElementById(id);
+                    if (!el) return;
+                    el.focus();
+                    el.value = val;
+                    el.dispatchEvent(new Event('input', {{ bubbles: true }}));
+                    el.dispatchEvent(new Event('change', {{ bubbles: true }}));
+                }}
+
+                setVal('address', '{street}');
+                setVal('unit', '{unit}');
+                setVal('city', '{city}');
+                setVal('state', '{state}');
+                setVal('zip', '{zip}');
+                setVal('county', '{CurrentCounty}');
+                setVal('apn', '{CurrentParcelNumber}');
+                setVal('yearBuilt', '{Currentbuildyr}');
+                setVal('listPrice', '{price}');
+            }})();
+        ")
+
+            Await Task.Delay(500)
+
+            ' ================= 4. OPEN ADVANCED INFO =================
+            Await WebViewog.CoreWebView2.ExecuteScriptAsync("
+            (function(){
+                var btns = document.querySelectorAll('button');
+                for (var i = 0; i < btns.length; i++) {
+                    if (btns[i].innerText.trim() === 'Advanced Info') {
+                        btns[i].click();
+                        return;
+                    }
+                }
+            })();
+        ")
+
+            Await Task.Delay(600)
+
+            ' ================= 5. POPULATE LISTING AGENT INFO =================
+            Await WebViewog.CoreWebView2.ExecuteScriptAsync($"
+            (function(){{
+                function setVal(id, val) {{
+                    var el = document.getElementById(id);
+                    if (!el) return;
+                    el.focus();
+                    el.value = val;
+                    el.dispatchEvent(new Event('input', {{ bubbles: true }}));
+                    el.dispatchEvent(new Event('change', {{ bubbles: true }}));
+                }}
+
+                setVal('listingAgentName', '{CurrentLAName}');
+                setVal('listingAgentEmail', '{CurrentLAEmail}');
+                setVal('listingAgentPhone', '{CurrentLACell}');
+            }})();
+        ")
+
+        Catch ex As system.Exception
+            MessageBox.Show("Manual entry failed" & vbCrLf & ex.Message)
+        End Try
+
+    End Sub
+
+
     Private Async Sub btnOGaddress_Click(sender As Object, e As RoutedEventArgs)
 
         Try
