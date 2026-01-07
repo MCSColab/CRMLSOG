@@ -59,6 +59,7 @@ Class MainWindow
     Private CurrentLACell As String
     Private CurrentLAEmail As String
     Private Currentbuildyr As String
+    Private currentLO As String
 
 
     Private Sub CurrentDomain_UnhandledException(ByVal sender As Object, ByVal e As UnhandledExceptionEventArgs)
@@ -721,6 +722,7 @@ $"
 
     End Function
     Private Async Function ExtractMatrixAddress(CoreWV As CoreWebView2) As Task
+
         Try
             Dim js As String =
         "(function () {
@@ -734,7 +736,8 @@ $"
                 county: null,
                 laName: null,
                 laCell: null,
-                laEmail: null
+                laEmail: null,
+                loOffice: null
             };
 
             /* ================= ADDRESS ================= */
@@ -828,12 +831,43 @@ if (laCell) result.laCell = laCell;
 
 
 
-            /* ================= LA EMAIL ================= */
-            const emailLink = document.querySelector('a[href^=""mailto:""]');
-            if (emailLink) result.laEmail = clean(emailLink.innerText);
+/* ================= LO OFFICE (Listing Brokerage) ================= */
+const loLabel = [...document.querySelectorAll('span')]
+    .find(s => clean(s.innerText) === 'LO:');
+
+if (loLabel) {
+    const row = loLabel.closest('td');
+    if (row) {
+        const links = row.querySelectorAll('a');
+        if (links.length > 0) {
+            // The visible office name is the LAST link
+            result.loOffice = clean(links[links.length - 1].innerText);
+        }
+    }
+}            
+/* ================= LA EMAIL ================= */
+let laEmail = null;
+
+for (const td of document.querySelectorAll('td')) {
+    const labelSpan = td.querySelector('span.formula.label');
+    if (!labelSpan) continue;
+
+    // EXACT match for LA EMAIL (ignores LO / CoLA / OTHER)
+    if (clean(labelSpan.innerText).includes('LA EMAIL')) {
+        const emailAnchor = td.querySelector('a[href^=""mailto:""]');
+        if (emailAnchor) {
+            laEmail = clean(emailAnchor.innerText);
+            break;
+        }
+    }
+}
+
+if (laEmail) result.laEmail = laEmail;
+
 
             return JSON.stringify(result);
-        })();"
+        })();
+"
 
             Dim raw As String = Await CoreWV.ExecuteScriptAsync(js)
             If String.IsNullOrWhiteSpace(raw) OrElse raw = "null" Then Exit Function
@@ -857,17 +891,22 @@ if (laCell) result.laCell = laCell;
                 CurrentLACell = data("laCell")
                 CurrentLAEmail = data("laEmail")
                 Currentbuildyr = data("yearBuilt")
+                currentLO = data("loOffice")
 
                 Dispatcher.Invoke(Sub()
                                       txtAddressSearch.Text = CurrentPropertyAddress
                                   End Sub)
 
-                Await UpdateOfferGunAddress()
+                'Await UpdateOfferGunAddress()
             End If
 
         Catch ex As System.Exception
             fxCommon.GenerateLog(ex)
         End Try
+
+
+
+
     End Function
     Private Async Function UpdateOfferGunAddress() As Task
 
@@ -882,7 +921,7 @@ if (laCell) result.laCell = laCell;
             If String.IsNullOrWhiteSpace(addr) Then Return
 
             ' Prevent duplicate injection
-            If addr = LastSentAddressToOfferGun Then Return
+            'If addr = LastSentAddressToOfferGun Then Return
 
             ' Serialize address safely for JS
             Dim addressJson As String = System.Text.Json.JsonSerializer.Serialize(addr)
@@ -963,7 +1002,7 @@ $"(async function(){{
         Dim strJScript As String
 
         If url.Contains("https://matrix.crmls.org/matrix/results") Then
-            Await ExtractMatrixAddress(CoreWV)
+            'Await ExtractMatrixAddress(CoreWV)
         End If
         ' LblURL.Text = url
         If bCodeProcessing = True Then
@@ -2259,6 +2298,7 @@ $"(async function(){{
                 setVal('apn', '{CurrentParcelNumber}');
                 setVal('yearBuilt', '{Currentbuildyr}');
                 setVal('listPrice', '{price}');
+               
             }})();
         ")
 
@@ -2294,6 +2334,7 @@ $"(async function(){{
                 setVal('listingAgentName', '{CurrentLAName}');
                 setVal('listingAgentEmail', '{CurrentLAEmail}');
                 setVal('listingAgentPhone', '{CurrentLACell}');
+                setVal('listingBrokerage', '{currentLO}');
             }})();
         ")
 
@@ -2322,6 +2363,13 @@ $"(async function(){{
             ' Switch to OfferGun tab ONLY when address exists
             TabControlMain.SelectedIndex = 3   ' OfferGun tab index
 
+            ' Small UI delay
+            Await Task.Delay(200)
+
+            ' SIMPLE REFRESH
+            'If WebViewog.CoreWebView2 IsNot Nothing Then
+            'WebViewog.CoreWebView2.Reload()
+            'End If
             ' Small delay to ensure WebView is visible
             Await Task.Delay(500)
 
@@ -2352,7 +2400,15 @@ $"(async function(){{
             ' Switch to OfferGun tab ONLY when address exists
             TabControlMain.SelectedIndex = 3   ' OfferGun tab index
 
-            ' Small delay to ensure WebView is visible
+            ' Small UI delay
+            Await Task.Delay(200)
+
+            ' SIMPLE REFRESH
+            'If WebViewog.CoreWebView2 IsNot Nothing Then
+            'WebViewog.CoreWebView2.Reload()
+            'End If
+
+            ' Small delay for page load
             Await Task.Delay(500)
 
             ' Populate OfferGun address input

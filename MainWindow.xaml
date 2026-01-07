@@ -219,7 +219,7 @@
                             <Button Name="btnMainBack" Content="&lt;" Click="btnMainBack_Click" Style="{StaticResource ButtonStyle}" Grid.Column="1" Margin="1,5"/>
                             <Button Name="btnMainFwd" Content="&gt;" Click="btnMainFwd_Click" Style="{StaticResource ButtonStyle}" Grid.Column="2" Margin="3,5"/>
                             <Button Content="Drag" Name="btnTabMain" Click="btnTabMain_Click" Style="{StaticResource ButtonStyle}"  Grid.Column="3" Margin="3,5" />
-                            <Button Name="btnOG" Height="25" Content="Copy Address" Click="btnOGaddress_Click" Style="{StaticResource ButtonStyle}" Grid.Column="3" Margin="118,5,-97,5"/>
+                           <!--<Button Name="btnOG" Height="25" Content="Send Offer" Click="btnOGaddress_Click" Style="{StaticResource ButtonStyle}" Grid.Column="3" Margin="118,5,-97,5"/>-->
                         </Grid>
 
                         <Grid Grid.Row="1" Margin="5,1,5,1" Grid.ColumnSpan="3">
@@ -309,7 +309,7 @@
 
                             <Button Name="btnAddressSearch" Content="Go" Grid.Column="4" Margin="5,5,5,5" Style="{StaticResource ButtonStyle}" Click="btnAddressSearch_Click"/>
                             <StackPanel Orientation="Horizontal" Grid.Column="5" Margin="5,0,0,0">
-                                <Button Name="btnOGAddress" Height="25" Content="Copy Address" Click="btnOGanalyse_Click" Style="{StaticResource ButtonStyle}" Grid.Column="4" Margin="10,5"/>
+                                <Button Name="btnOGAddress" Height="25" Content="Send Offer" Click="btnOGanalyse_Click" Style="{StaticResource ButtonStyle}" Grid.Column="4" Margin="10,5"/>
                                 <Button Padding="10,0,10,1" Content="&lt;" Margin="5,5,5,5" Style="{StaticResource ButtonStyle}" Click="btnCompBack_Click"/>
                                 <Button Padding="10,0,10,1" Content="&gt;" Margin="5,5,5,5" Style="{StaticResource ButtonStyle}" Click="btnCompFwd_Click"/>
                                 <Button Content="Drag" Name="btnTabAnalyze" Click="btnTabAnalyze_Click" Style="{StaticResource ButtonStyle}" Margin="3,5" />
