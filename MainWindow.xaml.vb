@@ -1,4 +1,5 @@
 ﻿Imports System.Collections.ObjectModel
+Imports System.ComponentModel.DataAnnotations
 Imports System.Data
 Imports System.Data.SQLite
 Imports System.Globalization
@@ -15,6 +16,7 @@ Imports HtmlAgilityPack
 Imports Microsoft.Office.Interop
 Imports Microsoft.Office.Interop.Excel
 Imports Microsoft.Office.Interop.Outlook
+Imports Microsoft.Web.WebView2
 Imports Microsoft.Web.WebView2.Core
 Imports Microsoft.Web.WebView2.Wpf
 Imports Microsoft.Win32
@@ -386,7 +388,7 @@ $"
 
             Await CoreWV.ExecuteScriptAsync(pwdScript)
 
-        Catch ex As system.Exception
+        Catch ex As System.Exception
             SystemSounds.Exclamation.Play()
             MessageBox.Show("Privy login failed." & vbCrLf & ex.Message)
         End Try
@@ -719,193 +721,6 @@ $"
         i.dispatchEvent(new Event('change',{bubbles:true}));
     })();
     ")
-
-    End Function
-    Private Async Function ExtractMatrixAddress(CoreWV As CoreWebView2) As Task
-
-        Try
-            Dim js As String =
-        "(function () {
-
-            const clean = t => t ? t.replace(/\s+/g,' ').trim() : null;
-
-            const result = {
-                address: null,
-                listPrice: null,
-                parcel: null,
-                county: null,
-                laName: null,
-                laCell: null,
-                laEmail: null,
-                loOffice: null
-            };
-
-            /* ================= ADDRESS ================= */
-            const addr = document.querySelector('span.d-mega');
-            if (addr) result.address = clean(addr.innerText);
-
-            /* ================= LIST PRICE ================= */
-            const lpLabel = [...document.querySelectorAll('span')]
-                .find(s => clean(s.innerText) === 'LIST PRICE:');
-            if (lpLabel) {
-                const priceSpan = lpLabel.parentElement.querySelector('span.wrapped-field');
-                if (priceSpan) result.listPrice = clean(priceSpan.innerText);
-            }
-
-            /* ================= PARCEL NUMBER ================= */
-let parcelLink = null;
-for (const a of document.querySelectorAll('a')) {
-    try {
-        if (a.getAttribute('href') &&
-            a.getAttribute('href').includes('thirdpartyformpost.aspx')) {
-            parcelLink = a;
-            break;
-        }
-    } catch(e) {}
-}
-if (parcelLink) result.parcel = clean(parcelLink.textContent);
-            /* ================= COUNTY ================= */
-            const countyLabel = [...document.querySelectorAll('span')]
-                .find(s => clean(s.innerText) === 'COUNTY:');
-            if (countyLabel) {
-                const countySpan = countyLabel.parentElement.querySelector('.wrapped-field');
-                if (countySpan) result.county = clean(countySpan.innerText);
-            }
-
-            /* ================= LA NAME ================= */
-            const laLabel = [...document.querySelectorAll('span')]
-                .find(s => clean(s.innerText) === 'LA:');
-            if (laLabel) {
-                const links = laLabel.parentElement.querySelectorAll('a');
-                if (links.length > 1) {
-                    result.laName = clean(links[1].innerText); // second link = name
-                }
-            }
-/* ================= PARCEL NUMBER ================= */
-let parcel = null;
-for (const span of document.querySelectorAll('span.wrapped-field')) {
-    const a = span.querySelector('a[href*=""thirdpartyformpost.aspx""]');
-    if (a && clean(a.innerText)) {
-        parcel = clean(a.innerText);
-        break;
-    }
-}
-if (parcel) result.parcel = parcel;
-/* ================= YEAR BUILT ================= */
-let yearBuilt = null;
-
-for (const td of document.querySelectorAll('td')) {
-    if (td.innerText.includes('YEAR BUILT')) {
-        const spans = td.querySelectorAll('span.formula.wrapped-field');
-        for (const s of spans) {
-            const val = clean(s.innerText);
-            if (/^\d{4}$/.test(val)) {   // ONLY year
-                yearBuilt = val;
-                break;
-            }
-        }
-        break;
-    }
-}
-if (yearBuilt) result.yearBuilt = yearBuilt;
-/* ================= LA CELL ================= */
-let laCell = null;
-
-for (const td of document.querySelectorAll('td')) {
-    const labelSpan = td.querySelector('span.formula.label');
-    if (!labelSpan) continue;
-
-    if (clean(labelSpan.innerText).includes('LA CELL')) {
-        const valueSpan = td.querySelector(
-            'span.formula.field:not(.label)'
-        );
-
-        if (valueSpan) {
-            laCell = clean(valueSpan.innerText);
-            break;
-        }
-    }
-}
-
-if (laCell) result.laCell = laCell;
-
-
-
-/* ================= LO OFFICE (Listing Brokerage) ================= */
-const loLabel = [...document.querySelectorAll('span')]
-    .find(s => clean(s.innerText) === 'LO:');
-
-if (loLabel) {
-    const row = loLabel.closest('td');
-    if (row) {
-        const links = row.querySelectorAll('a');
-        if (links.length > 0) {
-            // The visible office name is the LAST link
-            result.loOffice = clean(links[links.length - 1].innerText);
-        }
-    }
-}            
-/* ================= LA EMAIL ================= */
-let laEmail = null;
-
-for (const td of document.querySelectorAll('td')) {
-    const labelSpan = td.querySelector('span.formula.label');
-    if (!labelSpan) continue;
-
-    // EXACT match for LA EMAIL (ignores LO / CoLA / OTHER)
-    if (clean(labelSpan.innerText).includes('LA EMAIL')) {
-        const emailAnchor = td.querySelector('a[href^=""mailto:""]');
-        if (emailAnchor) {
-            laEmail = clean(emailAnchor.innerText);
-            break;
-        }
-    }
-}
-
-if (laEmail) result.laEmail = laEmail;
-
-
-            return JSON.stringify(result);
-        })();
-"
-
-            Dim raw As String = Await CoreWV.ExecuteScriptAsync(js)
-            If String.IsNullOrWhiteSpace(raw) OrElse raw = "null" Then Exit Function
-
-            ' JS → VB safe conversion
-            raw = raw.Trim(""""c)
-            raw = System.Text.RegularExpressions.Regex.Unescape(raw)
-
-            Dim data = System.Text.Json.JsonSerializer.Deserialize(Of Dictionary(Of String, String))(raw)
-            If data Is Nothing Then Exit Function
-
-            ' ================= STORE GLOBALLY =================
-            If Not String.IsNullOrWhiteSpace(data("address")) Then
-                LastExtractedAddress = data("address")
-                CurrentPropertyAddress = data("address")
-
-                CurrentListPrice = data("listPrice")
-                CurrentParcelNumber = data("parcel")
-                CurrentCounty = data("county")
-                CurrentLAName = data("laName")
-                CurrentLACell = data("laCell")
-                CurrentLAEmail = data("laEmail")
-                Currentbuildyr = data("yearBuilt")
-                currentLO = data("loOffice")
-
-                Dispatcher.Invoke(Sub()
-                                      txtAddressSearch.Text = CurrentPropertyAddress
-                                  End Sub)
-
-                'Await UpdateOfferGunAddress()
-            End If
-
-        Catch ex As System.Exception
-            fxCommon.GenerateLog(ex)
-        End Try
-
-
-
 
     End Function
     Private Async Function UpdateOfferGunAddress() As Task
@@ -2193,7 +2008,7 @@ $"(async function(){{
             txtAddressSearch.Text = searchAddress
             btnAddressSearch.RaiseEvent(New RoutedEventArgs(System.Windows.Controls.Button.ClickEvent))
 
-        Catch ex As system.Exception
+        Catch ex As System.Exception
             SystemSounds.Exclamation.Play()
             MessageBox.Show("Exception while extracting Privy address." & vbCrLf & ex.Message)
         End Try
@@ -2283,8 +2098,12 @@ $"(async function(){{
                 function setVal(id, val) {{
                     var el = document.getElementById(id);
                     if (!el) return;
-                    el.focus();
-                    el.value = val;
+                    
+                    var setter = Object.getOwnPropertyDescriptor(
+                        HTMLInputElement.prototype, 'value'
+                    ).set;
+
+                    setter.call(el, val);
                     el.dispatchEvent(new Event('input', {{ bubbles: true }}));
                     el.dispatchEvent(new Event('change', {{ bubbles: true }}));
                 }}
@@ -2325,8 +2144,12 @@ $"(async function(){{
                 function setVal(id, val) {{
                     var el = document.getElementById(id);
                     if (!el) return;
-                    el.focus();
-                    el.value = val;
+                    
+                    var setter = Object.getOwnPropertyDescriptor(
+                        HTMLInputElement.prototype, 'value'
+                    ).set;
+
+                    setter.call(el, val);
                     el.dispatchEvent(new Event('input', {{ bubbles: true }}));
                     el.dispatchEvent(new Event('change', {{ bubbles: true }}));
                 }}
@@ -2338,50 +2161,13 @@ $"(async function(){{
             }})();
         ")
 
-        Catch ex As system.Exception
+        Catch ex As System.Exception
             MessageBox.Show("Manual entry failed" & vbCrLf & ex.Message)
         End Try
 
     End Sub
 
 
-    Private Async Sub btnOGaddress_Click(sender As Object, e As RoutedEventArgs)
-
-        Try
-            ' Ensure Matrix WebView is ready
-            If WebViewMain.CoreWebView2 Is Nothing Then Exit Sub
-
-            ' Try extracting address from current Matrix page
-            Await ExtractMatrixAddress(WebViewMain.CoreWebView2)
-
-            ' If still empty, extraction failed → stay on page
-            If String.IsNullOrWhiteSpace(CurrentPropertyAddress) Then
-                MessageBox.Show("Property address not found on this page.")
-                Exit Sub
-            End If
-
-            ' Switch to OfferGun tab ONLY when address exists
-            TabControlMain.SelectedIndex = 3   ' OfferGun tab index
-
-            ' Small UI delay
-            Await Task.Delay(200)
-
-            ' SIMPLE REFRESH
-            'If WebViewog.CoreWebView2 IsNot Nothing Then
-            'WebViewog.CoreWebView2.Reload()
-            'End If
-            ' Small delay to ensure WebView is visible
-            Await Task.Delay(500)
-
-            ' Populate OfferGun address input
-            Await UpdateOfferGunAddress()
-
-        Catch ex As system.Exception
-            SystemSounds.Exclamation.Play()
-            MessageBox.Show("Failed to copy property address.")
-        End Try
-
-    End Sub
     Private Async Sub btnOGanalyse_Click(sender As Object, e As RoutedEventArgs)
 
         Try
@@ -2389,7 +2175,7 @@ $"(async function(){{
             If WebViewComp.CoreWebView2 Is Nothing Then Exit Sub
 
             ' Try extracting address from current Matrix page
-            Await ExtractMatrixAddress(WebViewComp.CoreWebView2)
+            Await ExtractMatrix_All_DOM(WebViewComp.CoreWebView2)
 
             ' If still empty, extraction failed → stay on page
             If String.IsNullOrWhiteSpace(CurrentPropertyAddress) Then
@@ -2420,6 +2206,289 @@ $"(async function(){{
         End Try
 
     End Sub
+    Private Async Sub btnOfferaddress_Click(sender As Object, e As RoutedEventArgs)
+
+        Try
+            If WebViewMain.CoreWebView2 Is Nothing Then Exit Sub
+
+            If Not Await ExtractMatrix_All_DOM(WebViewMain.CoreWebView2) Then
+                MessageBox.Show("Failed to extract Matrix details.")
+                Exit Sub
+            End If
+
+            ' Move to OfferGun tab (NO REFRESH)
+            TabControlMain.SelectedIndex = 3
+            Await Task.Delay(300)
+
+            Await UpdateOfferGunAddress()
+
+        Catch ex As System.Exception
+            fxCommon.GenerateLog(ex)
+            MessageBox.Show("Extraction error.")
+        End Try
+
+    End Sub
+
+
+    Private Async Function ExtractMatrix_All_DOM(Corewv As CoreWebView2) As Task(Of Boolean)
+
+        Dim html = Await GetWebViewHtml(Corewv)
+        If String.IsNullOrWhiteSpace(html) Then Return False
+
+        Dim doc As New HtmlAgilityPack.HtmlDocument()
+        doc.LoadHtml(html)
+
+        '========================
+        ' ADDRESS
+        '========================
+        Dim addrNode = doc.DocumentNode.SelectSingleNode("//span[contains(@class,'d-mega')]")
+        If addrNode IsNot Nothing Then
+            CurrentPropertyAddress = HtmlEntity.DeEntitize(addrNode.InnerText).Trim()
+        End If
+
+        '========================
+        ' LIST PRICE
+        '========================
+        CurrentListPrice = GetValueByLabel(doc, "LIST PRICE:")
+
+        '========================
+        ' COUNTY
+        '========================
+        CurrentCounty = GetValueByLabel(doc, "COUNTY:")
+
+        CurrentParcelNumber = ExtractParcel(doc)
+        CurrentLAName = ExtractLAName(doc)
+        Currentbuildyr = ExtractYearBuilt(doc)
+        CurrentLACell = ExtractLACell(doc)
+        currentLO = ExtractLOOffice(doc)
+        CurrentLAEmail = ExtractLAEmail(doc)
+        ' =========================================================
+        ' REGEX Extraction from Text Content (Fallback/Override)
+        ' =========================================================
+        Dim sText As String = Await Corewv.ExecuteScriptAsync("document.body.innerText")
+        If Not String.IsNullOrEmpty(sText) Then
+            Dim sTextDecoded As String = System.Text.RegularExpressions.Regex.Unescape(sText)
+
+            ' LA Name
+            Dim sectionLA As String = System.Text.RegularExpressions.Regex.Match(sTextDecoded, "LA:\s*\(.*?\)\s*(.*)").Groups(1).Value.Trim()
+            If Not String.IsNullOrEmpty(sectionLA) Then CurrentLAName = sectionLA
+
+            ' LO Office
+            Dim sectionLO As String = System.Text.RegularExpressions.Regex.Match(sTextDecoded, "LO:\s*\(.*?\)\s*(.*)").Groups(1).Value.Trim()
+            If Not String.IsNullOrEmpty(sectionLO) Then currentLO = sectionLO
+
+            ' LA Cell
+            Dim sectionLACell As String = System.Text.RegularExpressions.Regex.Match(
+        sTextDecoded,
+        "LA\s*CELL\s*[:\-]?\s*([\(\)\d\.\-\s]{7,20})",
+        System.Text.RegularExpressions.RegexOptions.IgnoreCase
+    ).Groups(1).Value.Trim()
+
+            If String.IsNullOrEmpty(sectionLACell) Then
+                sectionLACell =
+        System.Text.RegularExpressions.Regex.Match(
+            sTextDecoded,
+            "LA\s*DIRECT\s*[:\-]?\s*([\(\)\d\.\-\s]{7,20})",
+            System.Text.RegularExpressions.RegexOptions.IgnoreCase
+        ).Groups(1).Value.Trim()
+            End If
+            If Not String.IsNullOrEmpty(sectionLACell) Then CurrentLACell = sectionLACell
+
+
+
+            ' LA Email
+            Dim sectionLAEmail As String = System.Text.RegularExpressions.Regex.Match(sTextDecoded, "LA EMAIL:\s*(.*)").Groups(1).Value.Trim()
+            If String.IsNullOrEmpty(sectionLAEmail) Then
+                sectionLAEmail = System.Text.RegularExpressions.Regex.Match(sTextDecoded, "Offers Email:\s*(.*)").Groups(1).Value.Trim()
+            End If
+            If Not String.IsNullOrEmpty(sectionLAEmail) Then CurrentLAEmail = sectionLAEmail
+        End If
+
+
+        Return True
+    End Function
+    Private Function ExtractParcel(doc As HtmlDocument) As String
+
+        Dim parcelNode = doc.DocumentNode.SelectSingleNode(
+        "//span[contains(@class,'wrapped-field')]//a[contains(@href,'thirdpartyformpost.aspx')]"
+    )
+
+        If parcelNode IsNot Nothing Then
+            Return HtmlEntity.DeEntitize(parcelNode.InnerText).Trim()
+        End If
+
+        Return Nothing
+    End Function
+
+    Private Function ExtractYearBuilt(doc As HtmlDocument) As String
+
+        Dim td = doc.DocumentNode.SelectSingleNode(
+        "//td[contains(.,'YEAR BUILT')]"
+    )
+
+        If td Is Nothing Then Return Nothing
+
+        Dim spans = td.SelectNodes(".//span[contains(@class,'wrapped-field')]")
+        If spans Is Nothing Then Return Nothing
+
+        For Each span As HtmlAgilityPack.HtmlNode In spans
+            Dim val = span.InnerText.Trim()
+            If System.Text.RegularExpressions.Regex.IsMatch(val, "^\d{4}$") Then
+                Return val
+            End If
+        Next
+
+        Return Nothing
+    End Function
+    Private Function ExtractLAName(doc As HtmlDocument) As String
+
+        Dim td = doc.DocumentNode.SelectSingleNode(
+        "//span[contains(normalize-space(),'LA:')][not(contains(normalize-space(),'CoLA'))]/ancestor::td"
+    )
+
+        If td Is Nothing Then Return Nothing
+
+        Dim links = td.SelectNodes(".//a")
+        If links Is Nothing Then Return Nothing
+
+        For Each a In links
+            Dim txt = HtmlEntity.DeEntitize(a.InnerText).Trim()
+
+            ' skip empty, agent-id, short codes
+            If txt <> "" AndAlso
+           Not txt.StartsWith("G") AndAlso
+           txt.Any(AddressOf Char.IsLetter) AndAlso
+           txt.Length > 5 Then
+
+                Return txt
+            End If
+        Next
+
+        Return Nothing
+    End Function
+    Private Function ExtractLACell(doc As HtmlDocument) As String
+
+        Dim tds = doc.DocumentNode.SelectNodes("//td")
+        If tds Is Nothing Then Return Nothing
+
+        For Each td In tds
+
+            Dim label = td.SelectSingleNode(
+            ".//span[contains(translate(normalize-space(),'abcdefghijklmnopqrstuvwxyz','ABCDEFGHIJKLMNOPQRSTUVWXYZ'),'LA CELL')]"
+        )
+
+            If label Is Nothing Then Continue For
+
+            Dim spans = td.SelectNodes(".//span")
+            If spans Is Nothing Then Continue For
+
+            For Each s In spans
+                Dim txt = HtmlEntity.DeEntitize(s.InnerText).Trim()
+
+                ' phone pattern
+                If System.Text.RegularExpressions.Regex.IsMatch(txt, "\d{3}[-.\s]\d{3}[-.\s]\d{4}") Then
+                    Return txt
+                End If
+            Next
+        Next
+
+        Return Nothing
+    End Function
+    Private Function ExtractLAEmail(doc As HtmlDocument) As String
+
+        Dim tds = doc.DocumentNode.SelectNodes("//td")
+        If tds Is Nothing Then Return Nothing
+
+        For Each td In tds
+
+            Dim label = td.SelectSingleNode(
+            ".//span[contains(translate(normalize-space(),'abcdefghijklmnopqrstuvwxyz','ABCDEFGHIJKLMNOPQRSTUVWXYZ'),'EMAIL') or
+                  contains(translate(normalize-space(),'abcdefghijklmnopqrstuvwxyz','ABCDEFGHIJKLMNOPQRSTUVWXYZ'),'OFFERS')]"
+        )
+
+            If label Is Nothing Then Continue For
+
+            Dim mail = td.SelectSingleNode(".//a[starts-with(@href,'mailto:')]")
+            If mail IsNot Nothing Then
+                Return HtmlEntity.DeEntitize(mail.InnerText).Trim()
+            End If
+        Next
+
+        ' FINAL fallback (very rare cases)
+        Dim fallback = doc.DocumentNode.SelectSingleNode("//a[starts-with(@href,'mailto:')]")
+        If fallback IsNot Nothing Then
+            Return HtmlEntity.DeEntitize(fallback.InnerText).Trim()
+        End If
+
+        Return Nothing
+    End Function
+    Private Function ExtractLOOffice(doc As HtmlDocument) As String
+
+        Dim td = doc.DocumentNode.SelectSingleNode(
+        "//span[contains(normalize-space(),'LO:')][not(contains(normalize-space(),'CoLO'))]/ancestor::td"
+    )
+
+        If td Is Nothing Then Return Nothing
+
+        Dim links = td.SelectNodes(".//a")
+        If links Is Nothing Then Return Nothing
+
+        Dim best As String = Nothing
+
+        For Each a In links
+            Dim txt = HtmlEntity.DeEntitize(a.InnerText).Trim()
+
+            ' ignore office codes
+            If txt.Length > 6 AndAlso txt.Any(AddressOf Char.IsLetter) Then
+                If best Is Nothing OrElse txt.Length > best.Length Then
+                    best = txt
+                End If
+            End If
+        Next
+
+        Return best
+    End Function
+
+    Private Function GetValueByLabel(doc As HtmlAgilityPack.HtmlDocument, labelText As String) As String
+        Dim labelNode = doc.DocumentNode.SelectSingleNode(
+        $"//span[contains(@class,'label') and normalize-space(text())='{labelText}']"
+    )
+
+        If labelNode Is Nothing Then Return Nothing
+
+        Dim valueNode = labelNode.ParentNode.SelectSingleNode(
+        ".//span[contains(@class,'field') and not(contains(@class,'label'))]"
+    )
+
+        If valueNode Is Nothing Then Return Nothing
+
+        Return HtmlEntity.DeEntitize(valueNode.InnerText).Trim()
+    End Function
+    Private Async Function GetWebViewHtml(Corewv As CoreWebView2) As Task(Of String)
+
+        If Corewv Is Nothing Then
+            Throw New InvalidOperationException("CoreWebView2 is NOT initialized.")
+        End If
+
+        Dim html As String = Await Corewv.ExecuteScriptAsync(
+        "document.documentElement.outerHTML"
+    )
+
+        If String.IsNullOrWhiteSpace(html) Then Return Nothing
+
+        html = html.Trim(""""c)
+        html = System.Text.RegularExpressions.Regex.Unescape(html)
+
+        Return html
+    End Function
+
+    Private Function CleanText(node As HtmlNode) As String
+        If node Is Nothing Then Return Nothing
+        Return HtmlEntity.DeEntitize(node.InnerText).Replace(vbCr, "").Replace(vbLf, "").Trim()
+    End Function
+
+
+
 
 
 
