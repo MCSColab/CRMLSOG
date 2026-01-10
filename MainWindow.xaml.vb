@@ -726,90 +726,67 @@ $"
     Private Async Function UpdateOfferGunAddress() As Task
 
         Try
-            ' ---- Safety checks ----
             If WebViewog Is Nothing OrElse WebViewog.CoreWebView2 Is Nothing Then Return
 
             Dim url As String = WebViewog.Source?.ToString()?.ToLower()
             If String.IsNullOrEmpty(url) OrElse Not url.Contains("offergun.com/generate") Then Return
 
-            Dim addr As String = CurrentPropertyAddress
-            If String.IsNullOrWhiteSpace(addr) Then Return
+            If String.IsNullOrWhiteSpace(CurrentPropertyAddress) Then Return
 
-            ' Prevent duplicate injection
-            'If addr = LastSentAddressToOfferGun Then Return
-
-            ' Serialize address safely for JS
-            Dim addressJson As String = System.Text.Json.JsonSerializer.Serialize(addr)
+            Dim addrJson As String =
+            System.Text.Json.JsonSerializer.Serialize(CurrentPropertyAddress)
 
             Dim js As String =
-$"(async function(){{
+$"
+var input = document.getElementById('search');
+if (!input) {{
+    'search-input-not-found';
+}} else {{
+    input.focus();
+    input.value = {addrJson};
+    input.dispatchEvent(new Event('input', {{ bubbles: true }}));
+    input.dispatchEvent(new Event('change', {{ bubbles: true }}));
 
-    function sleep(ms) {{ return new Promise(r => setTimeout(r, ms)); }}
+    var btns = document.querySelectorAll('button');
+    var btn = null;
 
-    /* ---------- 1. Wait for address input ---------- */
-    let input = null;
-    for(let i=0;i<15;i++){{
-        input = document.getElementById('search');
-        if(input) break;
-        await sleep(300);
-    }}
-    if(!input) return 'input-not-found';
-
-    /* ---------- 2. Set address (React-safe) ---------- */
-    let setter = Object.getOwnPropertyDescriptor(
-        HTMLInputElement.prototype,'value'
-    ).set;
-
-    setter.call(input, {addressJson});
-    input.dispatchEvent(new Event('input', {{ bubbles:true }}));
-    input.dispatchEvent(new Event('change', {{ bubbles:true }}));
-
-    /* ---------- 3. Allow React to re-render ---------- */
-    await sleep(800);
-
-    /* ---------- 4. Find ENABLED Search button ---------- */
-    let btn = null;
-    for(let i=0;i<15;i++){{
-        btn = [...document.querySelectorAll('button')]
-            .find(b =>
-                b.textContent &&
-                b.textContent.trim().toLowerCase() === 'search' &&
-                !b.disabled &&
-                b.offsetParent !== null
-            );
-        if(btn) break;
-        await sleep(300);
+    for (var i = 0; i < btns.length; i++) {{
+        if (
+            btns[i].textContent &&
+            btns[i].textContent.trim().toLowerCase() === 'search' &&
+            !btns[i].disabled &&
+            btns[i].offsetParent !== null
+        ) {{
+            btn = btns[i];
+            break;
+        }}
     }}
 
-    if(!btn) return 'search-button-not-found';
-
-    /* ---------- 5. Real user-like click ---------- */
-    ['pointerdown','mousedown','mouseup','click'].forEach(type => {{
-        btn.dispatchEvent(new MouseEvent(type, {{
-            bubbles: true,
-            cancelable: true,
-            view: window
-        }}));
-    }});
-
-    return 'ok';
-
-}})();"
+    if (!btn) {{
+        'search-button-not-found';
+    }} else {{
+        btn.focus();
+        btn.click();
+        'ok';
+    }}
+}}
+"
 
             Dim result As String = Await WebViewog.CoreWebView2.ExecuteScriptAsync(js)
 
             If Not String.IsNullOrWhiteSpace(result) AndAlso result.ToLower().Contains("ok") Then
-                LastSentAddressToOfferGun = addr
-                LogMessage("OfferGun search triggered for address: " & addr)
+                LastSentAddressToOfferGun = CurrentPropertyAddress
+                LogMessage("OfferGun search triggered for address: " & CurrentPropertyAddress)
             Else
                 LogMessage("UpdateOfferGunAddress failed: " & result)
             End If
 
-        Catch ex As System.Exception
+        Catch ex As system.Exception
             fxCommon.GenerateLog(ex)
         End Try
 
     End Function
+
 
     Private Async Sub WebView_DOMContentLoaded(sender As Object, e As CoreWebView2DOMContentLoadedEventArgs)
         Dim CoreWV As Microsoft.Web.WebView2.Core.CoreWebView2 = sender
@@ -865,88 +842,92 @@ $"(async function(){{
         ElseIf url.Contains("https://matrix.crmls.org/matrix/search/residential/detail") Then
             If isAutofillEnabled Then
                 bCodeProcessing = False
-                WebViewComp.CoreWebView2.ExecuteScriptAsync("document.getElementById('Fm2_Ctrl12_TB').focus();")
-                WebViewComp.CoreWebView2.ExecuteScriptAsync("document.getElementById('Fm2_Ctrl12_TB').click();")
-                Threading.Thread.Sleep(100)
-                WebViewComp.CoreWebView2.ExecuteScriptAsync("document.getElementById('Fm2_Ctrl12_TB').value = '" & txtAddressSearch.Text & "';MapSearchJs.geocode();")
-                Threading.Thread.Sleep(250)
-                WaitForSuggestions()
-                WebViewComp.CoreWebView2.ExecuteScriptAsync("document.querySelectorAll('.disambiguation li')[1].click()")
+                If WebViewComp IsNot Nothing AndAlso WebViewComp.CoreWebView2 IsNot Nothing AndAlso Object.ReferenceEquals(CoreWV, WebViewComp.CoreWebView2) Then
+                    WebViewComp.CoreWebView2.ExecuteScriptAsync("document.getElementById('Fm2_Ctrl12_TB').focus();")
+                    WebViewComp.CoreWebView2.ExecuteScriptAsync("document.getElementById('Fm2_Ctrl12_TB').click();")
+                    Threading.Thread.Sleep(100)
+                    WebViewComp.CoreWebView2.ExecuteScriptAsync("document.getElementById('Fm2_Ctrl12_TB').value = '" & txtAddressSearch.Text & "';MapSearchJs.geocode();")
+                    Threading.Thread.Sleep(250)
+                    WaitForSuggestions()
+                    WebViewComp.CoreWebView2.ExecuteScriptAsync("document.querySelectorAll('.disambiguation li')[1].click()")
 
-                'Now enable checkboxes
-                Threading.Thread.Sleep(200)
+                    'Now enable checkboxes
+                    Threading.Thread.Sleep(200)
 
-                'set Radius
-                SetRadius()
-                Threading.Thread.Sleep(500)
+                    'set Radius
+                    SetRadius()
+                    Threading.Thread.Sleep(500)
 
-                'Status
-                clickCheckbox("Active")
-                Threading.Thread.Sleep(100)
-                clickCheckbox("Act Under Contract")
-                Threading.Thread.Sleep(100)
-                clickCheckbox("Pending")
-                Threading.Thread.Sleep(100)
-                clickCheckbox("Closed")
-                Threading.Thread.Sleep(200)
+                    'Status
+                    clickCheckbox("Active")
+                    Threading.Thread.Sleep(100)
+                    clickCheckbox("Act Under Contract")
+                    Threading.Thread.Sleep(100)
+                    clickCheckbox("Pending")
+                    Threading.Thread.Sleep(100)
+                    clickCheckbox("Closed")
+                    Threading.Thread.Sleep(200)
 
-                'PropertyAccessors Sub type
-                Dim sSubType As String = ""
-                If rdoFam.IsChecked Then
-                    sSubType = "Single Family Residence"
-                ElseIf rdoCondo.IsChecked Then
-                    sSubType = "Condominium,Townhall"
-                End If
-                PropSubType(sSubType)
-                Threading.Thread.Sleep(1000)
-
-                'Choose City
-                Dim fullAddress As String = txtAddressSearch.Text
-                Dim addressParts() As String = fullAddress.Split(","c)
-                Dim cityName As String = ""
-                If addressParts.Length >= 2 Then
-                    cityName = addressParts(addressParts.Length - 2).Trim()
-                    If cityName <> "" Then
-                        SelectCity(cityName)
-                        Threading.Thread.Sleep(1000)
+                    'PropertyAccessors Sub type
+                    Dim sSubType As String = ""
+                    If rdoFam.IsChecked Then
+                        sSubType = "Single Family Residence"
+                    ElseIf rdoCondo.IsChecked Then
+                        sSubType = "Condominium,Townhall"
                     End If
-                End If
+                    PropSubType(sSubType)
+                    Threading.Thread.Sleep(1000)
 
-                'Enter SqFt range
-                If txtSqFtRange.Text.Trim() <> "" Then
-                    Dim iSqftRange As Double = Val(txtSqFtRange.Text.Trim())
-                    Dim iProSqFt As Double = 0
-                    Dim liSqFT As New List(Of String)
-
-                    liSqFT = GetGridSelectedItems("SqFt", "Checked")
-                    If (liSqFT.Count > 0) Then
-                        If (liSqFT.Count = 1) Then
-                            iProSqFt = Val(liSqFT.Item(0).ToString())
-                        Else
-                            SystemSounds.Exclamation.Play()
-                            MessageBox.Show("Please select one item to proceed.")
+                    'Choose City
+                    Dim fullAddress As String = txtAddressSearch.Text
+                    Dim addressParts() As String = fullAddress.Split(","c)
+                    Dim cityName As String = ""
+                    If addressParts.Length >= 2 Then
+                        cityName = addressParts(addressParts.Length - 2).Trim()
+                        If cityName <> "" Then
+                            SelectCity(cityName)
+                            Threading.Thread.Sleep(1000)
                         End If
-
-                        'Create a sqft range with the calculation: SqFtRange = "(iProSqFt - iSqftRange) - (iProSqFt + iSqftRange)"
-                        Dim sqftRange As String = (iProSqFt - iSqftRange).ToString() & "-" & (iProSqFt + iSqftRange).ToString()
-                        'Enter this field in this field. 
-                        '<input type="text" class="textbox" id="Fm2_Ctrl2012_TB" name="Fm2_Ctrl2012_TB" onkeypress="return SearchJs.onTextBoxKeyPress(event, this,SearchJs.isNumericKeyCode);" onpaste="return SearchJs.onTextBoxPaste(event, this,SearchJs.isNumericKeyCode);" onkeyup="SearchJs.setBackgroundColor(this, SearchJs.checkTextBox);" onchange="SearchJs.setBackgroundColor(this, SearchJs.checkTextBox);" data-mtx-track="Living Area" data-mtx-track-prop-type="NumericTextBox" data-mtx-track-prop-id="2012" maxlength="500" style="width:85px;background-color:#ffffff;" value="" title="The living area of the property, in square feet or square meters.  See the Living Area Units field to determine if this is Square Feet or Meters.  The default is Square Feet.">
-                        lblSqFtRange.Content = "(" & sqftRange.ToString & ")"
-
-                        WebViewComp.CoreWebView2.ExecuteScriptAsync("document.getElementById('Fm2_Ctrl2012_TB').focus();")
-                        WebViewComp.CoreWebView2.ExecuteScriptAsync("document.getElementById('Fm2_Ctrl2012_TB').click();")
-                        Threading.Thread.Sleep(100)
-                        WebViewComp.CoreWebView2.ExecuteScriptAsync("document.getElementById('Fm2_Ctrl2012_TB').value = '" & sqftRange.ToString & "';")
-                        Threading.Thread.Sleep(250)
-
                     End If
-                End If
 
-                'Click search
-                RunJQuery("document.getElementById('m_ucSearchButtons_m_lbSearch').click();")
-                Threading.Thread.Sleep(200)
+                    'Enter SqFt range
+                    If txtSqFtRange.Text.Trim() <> "" Then
+                        Dim iSqftRange As Double = Val(txtSqFtRange.Text.Trim())
+                        Dim iProSqFt As Double = 0
+                        Dim liSqFT As New List(Of String)
+
+                        liSqFT = GetGridSelectedItems("SqFt", "Checked")
+                        If (liSqFT.Count > 0) Then
+                            If (liSqFT.Count = 1) Then
+                                iProSqFt = Val(liSqFT.Item(0).ToString())
+                            Else
+                                SystemSounds.Exclamation.Play()
+                                MessageBox.Show("Please select one item to proceed.")
+                            End If
+
+                            'Create a sqft range with the calculation: SqFtRange = "(iProSqFt - iSqftRange) - (iProSqFt + iSqftRange)"
+                            Dim sqftRange As String = (iProSqFt - iSqftRange).ToString() & "-" & (iProSqFt + iSqftRange).ToString()
+                            'Enter this field in this field. 
+                            '<input type="text" class="textbox" id="Fm2_Ctrl2012_TB" name="Fm2_Ctrl2012_TB" onkeypress="return SearchJs.onTextBoxKeyPress(event, this,SearchJs.isNumericKeyCode);" onpaste="return SearchJs.onTextBoxPaste(event, this,SearchJs.isNumericKeyCode);" onkeyup="SearchJs.setBackgroundColor(this, SearchJs.checkTextBox);" onchange="SearchJs.setBackgroundColor(this, SearchJs.checkTextBox);" data-mtx-track="Living Area" data-mtx-track-prop-type="NumericTextBox" data-mtx-track-prop-id="2012" maxlength="500" style="width:85px;background-color:#ffffff;" value="" title="The living area of the property, in square feet or square meters.  See the Living Area Units field to determine if this is Square Feet or Meters.  The default is Square Feet.">
+                            lblSqFtRange.Content = "(" & sqftRange.ToString & ")"
+
+                            WebViewComp.CoreWebView2.ExecuteScriptAsync("document.getElementById('Fm2_Ctrl2012_TB').focus();")
+                            WebViewComp.CoreWebView2.ExecuteScriptAsync("document.getElementById('Fm2_Ctrl2012_TB').click();")
+                            Threading.Thread.Sleep(100)
+                            WebViewComp.CoreWebView2.ExecuteScriptAsync("document.getElementById('Fm2_Ctrl2012_TB').value = '" & sqftRange.ToString & "';")
+                            Threading.Thread.Sleep(250)
+
+                        End If
+                    End If
+
+                    'Click search
+                    RunJQuery("document.getElementById('m_ucSearchButtons_m_lbSearch').click();")
+                    Threading.Thread.Sleep(200)
+
+                End If
             End If
         End If
+
 
     End Sub
     Private Sub WebView_WebMessageReceived(sender As Object, e As CoreWebView2WebMessageReceivedEventArgs)
@@ -2046,26 +2027,23 @@ $"(async function(){{
 
         Try
             If WebViewog.CoreWebView2 Is Nothing Then Exit Sub
+
             Dim price As String = CurrentListPrice
             If Not String.IsNullOrWhiteSpace(price) Then
                 price = System.Text.RegularExpressions.Regex.Replace(price, "[^\d]", "")
             End If
 
-            ' ================= 1. CLICK "Switch to Manual Entry" =================
+            ' ================= 1. SWITCH TO MANUAL ENTRY =================
             Await WebViewog.CoreWebView2.ExecuteScriptAsync("
-            (function(){
-                var btns = document.querySelectorAll('button');
-                for (var i = 0; i < btns.length; i++) {
-                    if (btns[i].innerText.trim() === 'Switch to Manual Entry') {
-                        btns[i].click();
-                        return 'CLICKED';
-                    }
-                }
-                return 'NOT_FOUND';
-            })();
+        var btns = document.querySelectorAll('button');
+        for (var i = 0; i < btns.length; i++) {
+            if (btns[i].innerText.trim() === 'Switch to Manual Entry') {
+                btns[i].click();
+                break;
+            }
+        }
         ")
 
-            ' wait for manual form to load
             Await Task.Delay(1200)
 
             ' ================= 2. SPLIT ADDRESS =================
@@ -2076,13 +2054,13 @@ $"(async function(){{
             Dim zip As String = ""
 
             Dim addrPattern As String =
-    "^(.*?)(?:\s+(?:Unit|Apt|#)\s*#?(\w+))?,\s*(.*?),\s*([A-Z]{2})\s*(\d{5})$"
+            "^(.*?)(?:\s+(?:Unit|Apt|#)\s*#?(\w+))?,\s*(.*?),\s*([A-Z]{2})\s*(\d{5})$"
 
             Dim m = System.Text.RegularExpressions.Regex.Match(
-    CurrentPropertyAddress,
-    addrPattern,
-    System.Text.RegularExpressions.RegexOptions.IgnoreCase
-)
+            CurrentPropertyAddress,
+            addrPattern,
+            System.Text.RegularExpressions.RegexOptions.IgnoreCase
+        )
 
             If m.Success Then
                 street = m.Groups(1).Value.Trim()
@@ -2092,80 +2070,69 @@ $"(async function(){{
                 zip = m.Groups(5).Value.Trim()
             End If
 
-            ' ================= 3. POPULATE BASIC FIELDS =================
-            Await WebViewog.CoreWebView2.ExecuteScriptAsync($"
-            (function(){{
-                function setVal(id, val) {{
-                    var el = document.getElementById(id);
-                    if (!el) return;
-                    
-                    var setter = Object.getOwnPropertyDescriptor(
-                        HTMLInputElement.prototype, 'value'
-                    ).set;
-
-                    setter.call(el, val);
-                    el.dispatchEvent(new Event('input', {{ bubbles: true }}));
-                    el.dispatchEvent(new Event('change', {{ bubbles: true }}));
-                }}
-
-                setVal('address', '{street}');
-                setVal('unit', '{unit}');
-                setVal('city', '{city}');
-                setVal('state', '{state}');
-                setVal('zip', '{zip}');
-                setVal('county', '{CurrentCounty}');
-                setVal('apn', '{CurrentParcelNumber}');
-                setVal('yearBuilt', '{Currentbuildyr}');
-                setVal('listPrice', '{price}');
-               
-            }})();
-        ")
-
-            Await Task.Delay(500)
-
-            ' ================= 4. OPEN ADVANCED INFO =================
+            ' ================= 3. OPEN ADVANCED INFO =================
             Await WebViewog.CoreWebView2.ExecuteScriptAsync("
-            (function(){
-                var btns = document.querySelectorAll('button');
-                for (var i = 0; i < btns.length; i++) {
-                    if (btns[i].innerText.trim() === 'Advanced Info') {
-                        btns[i].click();
-                        return;
-                    }
-                }
-            })();
+        var btns = document.querySelectorAll('button');
+        for (var i = 0; i < btns.length; i++) {
+            if (btns[i].innerText.trim() === 'Advanced Info') {
+                btns[i].click();
+                break;
+            }
+        }
         ")
 
             Await Task.Delay(600)
 
-            ' ================= 5. POPULATE LISTING AGENT INFO =================
+            ' ================= 4. POPULATE FIELDS (PURE DOM) =================
             Await WebViewog.CoreWebView2.ExecuteScriptAsync($"
-            (function(){{
-                function setVal(id, val) {{
-                    var el = document.getElementById(id);
-                    if (!el) return;
-                    
-                    var setter = Object.getOwnPropertyDescriptor(
-                        HTMLInputElement.prototype, 'value'
-                    ).set;
+        var el;
 
-                    setter.call(el, val);
-                    el.dispatchEvent(new Event('input', {{ bubbles: true }}));
-                    el.dispatchEvent(new Event('change', {{ bubbles: true }}));
-                }}
+        el = document.getElementById('address');
+        if (el) {{ el.value = '{street}'; el.dispatchEvent(new Event('input', {{ bubbles:true }})); }}
 
-                setVal('listingAgentName', '{CurrentLAName}');
-                setVal('listingAgentEmail', '{CurrentLAEmail}');
-                setVal('listingAgentPhone', '{CurrentLACell}');
-                setVal('listingBrokerage', '{currentLO}');
-            }})();
+        el = document.getElementById('unit');
+        if (el) {{ el.value = '{unit}'; el.dispatchEvent(new Event('input', {{ bubbles:true }})); }}
+
+        el = document.getElementById('city');
+        if (el) {{ el.value = '{city}'; el.dispatchEvent(new Event('input', {{ bubbles:true }})); }}
+
+        el = document.getElementById('state');
+        if (el) {{ el.value = '{state}'; el.dispatchEvent(new Event('input', {{ bubbles:true }})); }}
+
+        el = document.getElementById('zip');
+        if (el) {{ el.value = '{zip}'; el.dispatchEvent(new Event('input', {{ bubbles:true }})); }}
+
+        el = document.getElementById('county');
+        if (el) {{ el.value = '{CurrentCounty}'; el.dispatchEvent(new Event('input', {{ bubbles:true }})); }}
+
+        el = document.getElementById('apn');
+        if (el) {{ el.value = '{CurrentParcelNumber}'; el.dispatchEvent(new Event('input', {{ bubbles:true }})); }}
+
+        el = document.getElementById('yearBuilt');
+        if (el) {{ el.value = '{Currentbuildyr}'; el.dispatchEvent(new Event('input', {{ bubbles:true }})); }}
+
+        el = document.getElementById('listPrice');
+        if (el) {{ el.value = '{price}'; el.dispatchEvent(new Event('input', {{ bubbles:true }})); }}
+
+        el = document.getElementById('listingAgentName');
+        if (el) {{ el.value = '{CurrentLAName}'; el.dispatchEvent(new Event('input', {{ bubbles:true }})); }}
+
+        el = document.getElementById('listingAgentEmail');
+        if (el) {{ el.value = '{CurrentLAEmail}'; el.dispatchEvent(new Event('input', {{ bubbles:true }})); }}
+
+        el = document.getElementById('listingAgentPhone');
+        if (el) {{ el.value = '{CurrentLACell}'; el.dispatchEvent(new Event('input', {{ bubbles:true }})); }}
+
+        el = document.getElementById('listingBrokerage');
+        if (el) {{ el.value = '{currentLO}'; el.dispatchEvent(new Event('input', {{ bubbles:true }})); }}
         ")
 
-        Catch ex As System.Exception
+        Catch ex As system.Exception
             MessageBox.Show("Manual entry failed" & vbCrLf & ex.Message)
         End Try
 
     End Sub
+
 
 
     Private Async Sub btnOGanalyse_Click(sender As Object, e As RoutedEventArgs)
@@ -2187,7 +2154,7 @@ $"(async function(){{
             TabControlMain.SelectedIndex = 3   ' OfferGun tab index
 
             ' Small UI delay
-            Await Task.Delay(200)
+
 
             ' SIMPLE REFRESH
             'If WebViewog.CoreWebView2 IsNot Nothing Then
@@ -2195,7 +2162,7 @@ $"(async function(){{
             'End If
 
             ' Small delay for page load
-            Await Task.Delay(500)
+            Await Task.Delay(200)
 
             ' Populate OfferGun address input
             Await UpdateOfferGunAddress()
