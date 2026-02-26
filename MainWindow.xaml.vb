@@ -98,7 +98,7 @@ Class MainWindow
         AddHandler WebViewPrivy.CoreWebView2InitializationCompleted, AddressOf WebViewStatus_CoreWebView2InitializationCompleted
         'AddHandler WebViewPipe.CoreWebView2InitializationCompleted, AddressOf WebViewStatus_CoreWebView2InitializationCompleted
         AddHandler WebViewog.CoreWebView2InitializationCompleted, AddressOf WebViewStatus_CoreWebView2InitializationCompleted
-        AddHandler WebViewog2.CoreWebView2InitializationCompleted, AddressOf WebViewStatus_CoreWebView2InitializationCompleted
+        AddHandler WebViewLeads.CoreWebView2InitializationCompleted, AddressOf WebView_CoreWebView2InitializationCompleted
         AddHandler txtPrice.TextChanged, AddressOf TxtPrice_TextChanged
 
         bCodeProcessing = True
@@ -107,7 +107,7 @@ Class MainWindow
         WebViewPrivy.Source = New Uri("https://app.privy.pro/users/sign_in")
         'WebViewPipe.Source = New Uri("https://app.pipedrive.com/auth/login")
         WebViewog.Source = New Uri("https://www.offergun.com/generate")
-        WebViewog2.Source = New Uri("https://www.offergun.com/offer-history")
+        WebViewLeads.Source = New Uri("https://www.offergun.com/offer-history")
         'TabControlMain.SelectedIndex = 5
 
         TabControlMain.SelectedIndex = 0
@@ -738,39 +738,93 @@ $"
 
             Dim js As String =
 $"
-var input = document.getElementById('search');
-if (!input) {{
-    'search-input-not-found';
-}} else {{
-    input.focus();
-    input.value = {addrJson};
-    input.dispatchEvent(new Event('input', {{ bubbles: true }}));
-    input.dispatchEvent(new Event('change', {{ bubbles: true }}));
+(async function() {{
 
-    var btns = document.querySelectorAll('button');
-    var btn = null;
+      function sleep(ms) {{ return new Promise(r => setTimeout(r, ms)); }}
 
-    for (var i = 0; i < btns.length; i++) {{
-        if (
-            btns[i].textContent &&
-            btns[i].textContent.trim().toLowerCase() === 'search' &&
-            !btns[i].disabled &&
-            btns[i].offsetParent !== null
-        ) {{
-            btn = btns[i];
-            break;
-        }}
-    }}
+       // Check for Switch to Search Mode button
 
-    if (!btn) {{
-        'search-button-not-found';
-    }} else {{
-        btn.focus();
-        btn.click();
-        'ok';
-    }}
-}}
-"
+      let switchBtn = [...document.querySelectorAll('button')].find(b => b.textContent && b.textContent.trim() === 'Switch to Search Mode');
+
+      if (switchBtn) switchBtn.click();
+
+      await sleep(1000); // Wait for mode switch
+
+        
+
+    // wait for input
+
+      let input = null;
+
+      for (let i = 0; i < 20; i++) {{
+
+        input = document.getElementById('search') || document.querySelector('input[placeholder*=\""address\"" i]');
+
+        if (input) break;
+
+        await sleep(250);
+
+      }}
+
+      if (!input) return 'search-input-not-found';
+
+
+
+      // React-safe value set
+
+      input.dispatchEvent(new Event('focus', {{ bubbles: true }}));
+
+      try {{
+
+        let setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set;
+
+        setter.call(input, {addrJson});
+
+      }} catch (ex) {{
+
+        input.value = {addrJson};
+
+      }}
+
+      input.dispatchEvent(new Event('input', {{ bubbles: true }}));
+
+      input.dispatchEvent(new Event('change', {{ bubbles: true }}));
+
+      input.dispatchEvent(new Event('blur', {{ bubbles: true }}));
+
+
+
+      // allow render
+
+      await sleep(600);
+
+
+
+      // find visible/usable search button (robust)
+
+      let btn = [...document.querySelectorAll('button')].find(b =>
+
+        b.textContent && b.textContent.trim().toLowerCase() === 'search' && !b.disabled && b.offsetParent !== null
+
+      );
+
+      if (!btn) {{
+
+        btn = [...document.querySelectorAll('button')].find(b => (b.getAttribute('aria-label') || '').toLowerCase().includes('search'));
+
+      }}
+
+      if (!btn) return 'search-button-not-found';
+
+
+
+      ['pointerdown','mousedown','mouseup','click'].forEach(t => btn.dispatchEvent(new MouseEvent(t, {{ bubbles: true, cancelable: true, view: window }})));
+
+      return 'ok';
+
+    }})();
+
+    "
 
             Dim result As String = Await WebViewog.CoreWebView2.ExecuteScriptAsync(js)
 
@@ -781,7 +835,7 @@ if (!input) {{
                 LogMessage("UpdateOfferGunAddress failed: " & result)
             End If
 
-        Catch ex As system.Exception
+        Catch ex As System.Exception
             fxCommon.GenerateLog(ex)
         End Try
 
@@ -2026,113 +2080,361 @@ if (!input) {{
     Private Async Sub btnOGmanualEntry_Click(sender As Object, e As RoutedEventArgs)
 
         Try
+
             If WebViewog.CoreWebView2 Is Nothing Then Exit Sub
 
+
+
             Dim price As String = CurrentListPrice
+
             If Not String.IsNullOrWhiteSpace(price) Then
+
                 price = System.Text.RegularExpressions.Regex.Replace(price, "[^\d]", "")
+
             End If
+
+
 
             ' ================= 1. SWITCH TO MANUAL ENTRY =================
-            Await WebViewog.CoreWebView2.ExecuteScriptAsync("
-        var btns = document.querySelectorAll('button');
-        for (var i = 0; i < btns.length; i++) {
-            if (btns[i].innerText.trim() === 'Switch to Manual Entry') {
-                btns[i].click();
-                break;
-            }
-        }
-        ")
 
-            Await Task.Delay(1200)
+            Await WebViewog.CoreWebView2.ExecuteScriptAsync("
+
+    (function(){
+
+      var btns = document.querySelectorAll('button');
+
+      for (var i = 0; i < btns.length; i++) {
+
+        if (btns[i].innerText && btns[i].innerText.trim() === 'Switch to Manual Entry') {
+
+          btns[i].click();
+
+          return 'clicked';
+
+        }
+
+      }
+
+      return 'not-found';
+
+    })();
+
+    ")
+
+            ' Wait for manual form to appear
+
+            Await Task.Delay(1400)
+
+
 
             ' ================= 2. SPLIT ADDRESS =================
+
             Dim street As String = ""
+
             Dim unit As String = ""
+
             Dim city As String = ""
+
             Dim state As String = ""
+
             Dim zip As String = ""
 
-            Dim addrPattern As String =
-            "^(.*?)(?:\s+(?:Unit|Apt|#)\s*#?(\w+))?,\s*(.*?),\s*([A-Z]{2})\s*(\d{5})$"
 
-            Dim m = System.Text.RegularExpressions.Regex.Match(
-            CurrentPropertyAddress,
-            addrPattern,
-            System.Text.RegularExpressions.RegexOptions.IgnoreCase
-        )
+
+            ' Try strict pattern first
+
+            Dim addrPattern As String = "^(.*?)(?:\s+(?:Unit|Apt|#|Ste)\s*#?([\w-]+))?,\s*(.*?),\s*([A-Z]{2})\s*(\d{5}(?:-\d{4})?)$"
+
+            Dim m = System.Text.RegularExpressions.Regex.Match(CurrentPropertyAddress, addrPattern, System.Text.RegularExpressions.RegexOptions.IgnoreCase)
+
+
 
             If m.Success Then
+
                 street = m.Groups(1).Value.Trim()
-                unit = m.Groups(2).Value.Trim()
-                city = m.Groups(3).Value.Trim()
-                state = m.Groups(4).Value.Trim()
-                zip = m.Groups(5).Value.Trim()
+
+                unit = If(m.Groups(2).Success, m.Groups(2).Value.Trim(), "")
+
+                city = If(m.Groups(3).Success, m.Groups(3).Value.Trim(), "")
+
+                state = If(m.Groups(4).Success, m.Groups(4).Value.Trim(), "")
+
+                zip = If(m.Groups(5).Success, m.Groups(5).Value.Trim(), "")
+
+            Else
+
+                ' Fallback: Try to just use the whole string as street if parsing fails, or log warning
+
+                LogMessage("Manual Entry: Address Regex match failed for: " & CurrentPropertyAddress)
+
+                street = CurrentPropertyAddress ' Fallback to putting everything in street
+
             End If
 
+
+
+            LogMessage($"Manual Entry Parsed: Street='{street}', Unit='{unit}', City='{city}', State='{state}', Zip='{zip}', Price='{price}'")
+
+
+
             ' ================= 3. OPEN ADVANCED INFO =================
-            Await WebViewog.CoreWebView2.ExecuteScriptAsync("
-        var btns = document.querySelectorAll('button');
-        for (var i = 0; i < btns.length; i++) {
-            if (btns[i].innerText.trim() === 'Advanced Info') {
-                btns[i].click();
-                break;
-            }
-        }
-        ")
 
-            Await Task.Delay(600)
+            ' Check aria-expanded to avoid closing it if it's already open
 
-            ' ================= 4. POPULATE FIELDS (PURE DOM) =================
-            Await WebViewog.CoreWebView2.ExecuteScriptAsync($"
-        var el;
+            Dim advInfoScript As String = "
 
-        el = document.getElementById('address');
-        if (el) {{ el.value = '{street}'; el.dispatchEvent(new Event('input', {{ bubbles:true }})); }}
+            (function(){
 
-        el = document.getElementById('unit');
-        if (el) {{ el.value = '{unit}'; el.dispatchEvent(new Event('input', {{ bubbles:true }})); }}
+              var btns = document.querySelectorAll('button');
 
-        el = document.getElementById('city');
-        if (el) {{ el.value = '{city}'; el.dispatchEvent(new Event('input', {{ bubbles:true }})); }}
+              for (var i = 0; i < btns.length; i++) {
 
-        el = document.getElementById('state');
-        if (el) {{ el.value = '{state}'; el.dispatchEvent(new Event('input', {{ bubbles:true }})); }}
+                if (btns[i].textContent && btns[i].textContent.trim().includes('Advanced Info')) {
 
-        el = document.getElementById('zip');
-        if (el) {{ el.value = '{zip}'; el.dispatchEvent(new Event('input', {{ bubbles:true }})); }}
+                  if (btns[i].getAttribute('aria-expanded') !== 'true') {
 
-        el = document.getElementById('county');
-        if (el) {{ el.value = '{CurrentCounty}'; el.dispatchEvent(new Event('input', {{ bubbles:true }})); }}
+                      btns[i].click();
 
-        el = document.getElementById('apn');
-        if (el) {{ el.value = '{CurrentParcelNumber}'; el.dispatchEvent(new Event('input', {{ bubbles:true }})); }}
+                      return 'clicked';
 
-        el = document.getElementById('yearBuilt');
-        if (el) {{ el.value = '{Currentbuildyr}'; el.dispatchEvent(new Event('input', {{ bubbles:true }})); }}
+                  } else {
 
-        el = document.getElementById('listPrice');
-        if (el) {{ el.value = '{price}'; el.dispatchEvent(new Event('input', {{ bubbles:true }})); }}
+                      return 'already-open';
 
-        el = document.getElementById('listingAgentName');
-        if (el) {{ el.value = '{CurrentLAName}'; el.dispatchEvent(new Event('input', {{ bubbles:true }})); }}
+                  }
 
-        el = document.getElementById('listingAgentEmail');
-        if (el) {{ el.value = '{CurrentLAEmail}'; el.dispatchEvent(new Event('input', {{ bubbles:true }})); }}
+                }
 
-        el = document.getElementById('listingAgentPhone');
-        if (el) {{ el.value = '{CurrentLACell}'; el.dispatchEvent(new Event('input', {{ bubbles:true }})); }}
+              }
 
-        el = document.getElementById('listingBrokerage');
-        if (el) {{ el.value = '{currentLO}'; el.dispatchEvent(new Event('input', {{ bubbles:true }})); }}
-        ")
+              return 'not-found';
 
-        Catch ex As system.Exception
+            })();"
+
+
+
+            Await WebViewog.CoreWebView2.ExecuteScriptAsync(advInfoScript)
+
+            ' Await Task.Delay(800) ' Wait for expansion - moved below waiting loop
+
+
+
+            ' ================= 4. POPULATE FIELDS using React-safe setter =================
+
+            ' Sanitize inputs to prevent JS syntax errors
+
+            Dim Sanitize As Func(Of String, String) = Function(s) If(s, "").Replace("\", "\\").Replace("'", "\'")
+
+
+
+            ' Step 4a: Wait for Address field to appear (VB-side wait)
+
+            Dim foundAddress As Boolean = False
+
+            For i As Integer = 1 To 20
+
+                Dim checkScript As String = "(function(){ return !!(document.getElementById('address') || document.querySelector('input[name=""address""]')); })();"
+
+                Dim checkResult As String = Await WebViewog.CoreWebView2.ExecuteScriptAsync(checkScript)
+
+
+
+                If checkResult = "true" Then
+
+                    foundAddress = True
+
+                    Exit For
+
+                End If
+
+                Await Task.Delay(250)
+
+            Next
+
+
+
+            If Not foundAddress Then
+
+                LogMessage("Manual Entry Warning: Address input not found after waiting.")
+
+            End If
+
+
+
+            ' Step 4b: Synchronous JS to fill values (Using execCommand to simulate native typing)
+
+            ' ================= 4. POPULATE FIELDS (CDP METHOD) =================
+
+
+
+            ' Helper to focus and verify element existence
+
+            Dim FocusElement As Func(Of String, Task(Of Boolean)) = Async Function(id As String)
+
+                                                                        Dim script As String = $"
+
+                (function() {{
+
+                    var el = document.getElementById('{id}') || document.querySelector('input[name=""{id}""]');
+
+                    if(el) {{
+
+                        el.focus();
+
+                        el.value = ''; // Clear first
+
+                        return true;
+
+                    }}
+
+                    return false;
+
+                }})();"
+
+                                                                        Dim res As String = Await WebViewog.CoreWebView2.ExecuteScriptAsync(script)
+
+                                                                        Return res = "true"
+
+                                                                    End Function
+
+
+
+            ' Helper to blur element (trigger validation)
+
+            Dim BlurElement As Func(Of String, Task) = Async Function(id As String)
+
+                                                           Await WebViewog.CoreWebView2.ExecuteScriptAsync($"
+
+                 (function() {{
+
+                    var el = document.getElementById('{id}') || document.querySelector('input[name=""{id}""]');
+
+                    if(el) el.dispatchEvent(new Event('blur', {{ bubbles: true }}));
+
+                 }})();")
+
+                                                       End Function
+
+
+
+            ' 4a. Wait for form
+
+            Dim foundAddrs As Boolean = False
+
+            For i As Integer = 1 To 20
+
+                If Await FocusElement("address") Then
+
+                    foundAddrs = True
+
+                    Exit For
+
+                End If
+
+                Await Task.Delay(250)
+
+            Next
+
+
+
+            If Not foundAddrs Then
+
+                LogMessage("Manual Entry Population Failed: Address input not found.")
+
+                Exit Sub
+
+            End If
+
+
+
+            ' 4b. Fill Fields using CDP (Input.insertText)
+
+            ' This mimics native user typing at the browser level, bypassing React state issues.
+
+            Dim fields As New Dictionary(Of String, String)()
+
+            fields.Add("address", street)
+
+            fields.Add("unit", unit)
+
+            fields.Add("city", city)
+
+            fields.Add("state", state)
+
+            fields.Add("zip", zip)
+
+            fields.Add("county", CurrentCounty)
+
+            fields.Add("apn", CurrentParcelNumber)
+
+            fields.Add("yearBuilt", Currentbuildyr)
+
+            fields.Add("listPrice", price)
+
+            fields.Add("offerPrice", price)
+
+            fields.Add("listingAgentName", CurrentLAName)
+
+            fields.Add("listingAgentEmail", CurrentLAEmail)
+
+            ' Clean phone number: remove newlines and anything following, keep only the first number
+
+            Dim cleanPhone As String = CurrentLACell
+
+            If Not String.IsNullOrEmpty(cleanPhone) Then
+
+                ' Split by newline or valid delimiters if multiple numbers exist
+
+                Dim parts = cleanPhone.Split({vbCr, vbLf}, StringSplitOptions.RemoveEmptyEntries)
+
+                If parts.Length > 0 Then cleanPhone = parts(0).Trim()
+
+                ' Optional: Remove "1." or "2." prefix if present (Regex)
+
+                cleanPhone = System.Text.RegularExpressions.Regex.Replace(cleanPhone, "^\d+\.\s*", "")
+
+            End If
+            fields.Add("listingAgentPhone", cleanPhone)
+            fields.Add("listingBrokerage", currentLO)
+
+            For Each field In fields
+
+                If Not String.IsNullOrEmpty(field.Value) Then
+
+                    Dim focused As Boolean = Await FocusElement(field.Key)
+
+                    If focused Then
+
+                        Dim p As String = Newtonsoft.Json.JsonConvert.SerializeObject(New With {Key .text = field.Value})
+                        Await WebViewog.CoreWebView2.CallDevToolsProtocolMethodAsync("Input.insertText", p)
+
+                        Await BlurElement(field.Key)
+
+                        Await Task.Delay(50) ' Tiny delay to be safe
+
+                    Else
+
+                        LogMessage($"Manual Entry: Could not focus field '{field.Key}'")
+
+                    End If
+
+                End If
+
+            Next
+
+
+
+            LogMessage("Manual Entry Population (CDP) Complete.")
+
+
+
+        Catch ex As System.Exception
+
             MessageBox.Show("Manual entry failed" & vbCrLf & ex.Message)
+
         End Try
 
     End Sub
-
 
 
     Private Async Sub btnOGanalyse_Click(sender As Object, e As RoutedEventArgs)
@@ -3478,6 +3780,12 @@ if (!input) {{
     Private Sub btnTabPrivy_Click(sender As Object, e As RoutedEventArgs)
         FloatTabItem(tabPrivy, sender)
     End Sub
+    Private Sub btnTabLeads_Click(sender As Object, e As RoutedEventArgs)
+        FloatTabItem(tabOG2, sender)
+    End Sub
+    Private Sub btnTabOG_Click(sender As Object, e As RoutedEventArgs)
+        FloatTabItem(tabOG, sender)
+    End Sub
 
 
     Private Sub FloatTabItem(tabItem As TabItem, button As System.Windows.Controls.Button)
@@ -3831,7 +4139,7 @@ if (!input) {{
             'MessageBox.Show("Settings saved successfully!",
             '            "Success", MessageBoxButton.OK, MessageBoxImage.Information)
 
-        Catch ex As system.Exception
+        Catch ex As System.Exception
             MessageBox.Show("Failed to save settings: " & ex.Message,
                         "Error", MessageBoxButton.OK, MessageBoxImage.Error)
         End Try
@@ -3863,6 +4171,9 @@ if (!input) {{
         TabControlMain.Width = newWindowWidth - iadjust
         WebViewMain.Width = newWindowWidth - iadjust - 10
         WebViewComp.Width = newWindowWidth - iadjust - 10
+        If WebViewLeads IsNot Nothing Then
+            WebViewLeads.Width = newWindowWidth - iadjust - 10
+        End If
         'dgDetails.Width = newWindowWidth - iadjust - 50
     End Sub
     Private Sub LogLayoutInfo(context As String)
@@ -4371,6 +4682,10 @@ if (!input) {{
         '                                    Me.txtLog.Text = newLogEntry & vbCrLf & Me.txtLog.Text
         '                                End Sub)
         'End If
+    End Sub
+
+    Private Sub TabControlMain_SelectionChanged(sender As Object, e As SelectionChangedEventArgs)
+
     End Sub
 End Class
 
