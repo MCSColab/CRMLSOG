@@ -129,6 +129,7 @@
                 <RowDefinition Height="Auto" />
                 <RowDefinition Height="Auto" />
                 <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
                 <RowDefinition Height="*" />
             </Grid.RowDefinitions>
 
@@ -149,6 +150,7 @@
             <Button Name="btnCompGoGoogle" Click="btnCompGoGoogle_Click"  Content="Go Google" Width="100" Grid.Row="9" HorizontalAlignment="Center" Margin="12,5,13,5" Style="{StaticResource ButtonStyle}" />
             <Button Name="btnToggleSidebar" Content="Toggle Sidebar" Width="100" Grid.Row="10" HorizontalAlignment="Center" Margin="12,5,13,5" Style="{StaticResource ButtonStyle}" Click="btnToggleSidebar_Click" VerticalAlignment="Bottom"/>
             <Button Name="btnExit" Click="btnExit_Click"  Content="Exit" Width="100" Grid.Row="11" HorizontalAlignment="Center" Margin="12,5,13,5" Style="{StaticResource ButtonStyle}" />
+            <TextBox Name="txturi" Width="100" Height="20" Grid.Row="12" HorizontalAlignment="Center" PreviewTextInput="txtPrice_PreviewTextInput" LostFocus="txtPrice_LostFocus" Style="{StaticResource TextBoxStyle}" />
             <!-- Removed unnecessary WrapPanel and its content for brevity -->
         </Grid>
 
@@ -595,7 +597,8 @@
                         </Grid.RowDefinitions>
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="Auto"/>
-                            <ColumnDefinition Width="146.83"/>
+                            <ColumnDefinition Width="27.1"/>
+                            <ColumnDefinition Width="138.33"/>
                             <ColumnDefinition Width="147*"/>
                             <ColumnDefinition Width="12*"/>
                             <ColumnDefinition/>
@@ -603,7 +606,7 @@
 
 
                         <!-- Navigation Buttons -->
-                        <Grid HorizontalAlignment="Center" VerticalAlignment="Center" Grid.ColumnSpan="2" >
+                        <Grid HorizontalAlignment="Left" VerticalAlignment="Center" Grid.ColumnSpan="3" >
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="Auto"/>
                                 <ColumnDefinition Width="Auto"/>
@@ -617,7 +620,7 @@
                         </Grid>
 
                         <!-- WebView -->
-                        <Wpf:WebView2 Name="WebViewog" Grid.Row="1" Grid.ColumnSpan="4" Margin="10,5,9,10"/>
+                        <Wpf:WebView2 Name="WebViewog" Grid.Row="1" Grid.ColumnSpan="5" Margin="10,5,9,10"/>
                     </Grid>
                 </TabItem>
 

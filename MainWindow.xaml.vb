@@ -87,9 +87,12 @@ Class MainWindow
     End Sub
 
     Private Sub Window_Loaded(sender As Object, e As RoutedEventArgs)
-        If Not IsOutlookRunning() Then
-            StartOutlook()
-        End If
+        ' Do not start Outlook at application startup. Outlook will be checked/started
+        ' when the user requests the Email action to avoid forcing Outlook to run
+        ' on every application launch.
+        'If Not IsOutlookRunning() Then
+        '    StartOutlook()
+        'End If
         Me.WindowState = WindowState.Maximized
         InitializeComboBoxData()
         AddHandler WebViewMain.CoreWebView2InitializationCompleted, AddressOf WebView_CoreWebView2InitializationCompleted
@@ -101,6 +104,26 @@ Class MainWindow
         AddHandler WebViewLeads.CoreWebView2InitializationCompleted, AddressOf WebView_CoreWebView2InitializationCompleted
         AddHandler txtPrice.TextChanged, AddressOf TxtPrice_TextChanged
 
+        ' Initiate background initialization without blocking the UI thread.
+        ' Using Task.Run or just calling it without Await ensures the UI continues to load.
+        WebViewMain.EnsureCoreWebView2Async()
+        WebViewComp.EnsureCoreWebView2Async()
+        WebViewPrivy.EnsureCoreWebView2Async()
+        WebViewog.EnsureCoreWebView2Async()
+        WebViewLeads.EnsureCoreWebView2Async()
+
+        ' CRITICAL: If any view is ALREADY initialized (e.g. from XAML or early loading), 
+        ' the event won't fire, so we must manually attach handlers now.
+        If WebViewog.CoreWebView2 IsNot Nothing Then
+            AttachHandlersToWebViewog(WebViewog.CoreWebView2)
+            ' Trigger manual load logic if it already has a source
+            WebViewStatus_DOMContentLoaded(WebViewog.CoreWebView2, Nothing)
+        End If
+        If WebViewPrivy.CoreWebView2 IsNot Nothing Then
+            AttachHandlersToWebViewog(WebViewPrivy.CoreWebView2)
+            WebViewStatus_DOMContentLoaded(WebViewPrivy.CoreWebView2, Nothing)
+        End If
+
         bCodeProcessing = True
         chkAutoFill.IsChecked = isAutofillEnabled
         WebViewMain.Source = New Uri("https://matrix.crmls.org/Matrix/Default.aspx")
@@ -110,7 +133,7 @@ Class MainWindow
         WebViewLeads.Source = New Uri("https://www.offergun.com/offer-history")
         'TabControlMain.SelectedIndex = 5
 
-        TabControlMain.SelectedIndex = 0
+        TabControlMain.SelectedIndex = 3
         cmbEmailAccount.ItemsSource = fxCommon.GetOutlookEmailAccounts()
         cmbEmailAccount.SelectedIndex = 0
         Dim xmlDoc As New XmlDocument()
@@ -125,6 +148,8 @@ Class MainWindow
         'rdoMessage.IsChecked = True
         origLeftSidebarWidth = SidebarColumn.Width.Value
         origRightSidebarWidth = RightSidebarColumn.Width.Value
+
+        txturi.Text = WebViewog.Source.ToString()
     End Sub
 
     Private Async Sub TxtPrice_TextChanged(
@@ -550,16 +575,16 @@ $"
         "
 
             ' Inject the JavaScript function into the WebView2 page
-            CoreWV.ExecuteScriptAsync(jsFunction)
+            Await CoreWV.ExecuteScriptAsync(jsFunction)
             Await Task.Delay(200) ' Give a moment for the JavaScript function to be defined in the browser context
 
             ' Call the JavaScript function for the email field
-            CoreWV.ExecuteScriptAsync("simulateTyping('login', '" & userName.Replace("'", "\'") & "');")
+            Await CoreWV.ExecuteScriptAsync("simulateTyping('login', '" & userName.Replace("'", "\'") & "');")
             ' Estimate the time needed for typing based on string length and per-character delays
             Await Task.Delay(userName.Length * 150 + 500) ' (approx. 150ms per char + 500ms buffer)
 
             ' Call the JavaScript function for the password field
-            CoreWV.ExecuteScriptAsync("simulateTyping('password', '" & password.Replace("'", "\'") & "');")
+            Await CoreWV.ExecuteScriptAsync("simulateTyping('password', '" & password.Replace("'", "\'") & "');")
             ' Estimate the time needed for typing based on string length and per-character delays
             Await Task.Delay(password.Length * 150 + 500) ' (approx. 150ms per char + 500ms buffer)
 
@@ -615,6 +640,11 @@ $"
             CoreWV.ExecuteScriptAsync("document.getElementById('elPasswordText').value = '" & password & "';")
             CoreWV.ExecuteScriptAsync("document.querySelector(""button.py-4.px-16.m-2.text-xl.text-white.font-medium.transition-colors.duration-150.bg-yellow-400.rounded-lg.hover:bg-opacity-80"").click();")
             CoreWV.ExecuteScriptAsync("document.querySelector(""button[name='button']"").click();")
+            ' New: Attempt to click any standard submit button
+            CoreWV.ExecuteScriptAsync("document.querySelector('button[type=""submit""]').click();")
+            CoreWV.ExecuteScriptAsync("document.querySelector('input[type=""submit""]').click();")
+            CoreWV.ExecuteScriptAsync("document.querySelector('button.btn-primary').click();")
+            CoreWV.ExecuteScriptAsync("document.querySelector('.login-dialog-buttons button').click();")
         Else
             SystemSounds.Exclamation.Play()
             MessageBox.Show("Username or Password is missing in the Login.xml for CRMLS")
@@ -622,28 +652,58 @@ $"
         Return String.Empty
     End Function
 
+    ''' <summary>
+    ''' Helper to attach event handlers to CoreWebView2. 
+    ''' Separated to allow calling from both InitializationCompleted and early check.
+    ''' </summary>
+    Private Sub AttachHandlersToWebViewog(coreWV As Microsoft.Web.WebView2.Core.CoreWebView2)
+        ' Use both DOMContentLoaded and NavigationCompleted for maximum reliability
+        AddHandler coreWV.DOMContentLoaded, AddressOf WebViewStatus_DOMContentLoaded
+        AddHandler coreWV.NavigationCompleted, AddressOf WebViewStatus_NavigationCompleted
+    End Sub
+
     Private Sub WebView_CoreWebView2InitializationCompleted(sender As Object, e As CoreWebView2InitializationCompletedEventArgs)
         Dim CurrentWV As Microsoft.Web.WebView2.Wpf.WebView2 = sender
         If e.IsSuccess Then
             AddHandler CurrentWV.CoreWebView2.DOMContentLoaded, AddressOf WebView_DOMContentLoaded
-            'AddHandler CurrentWV.NavigationStarting, AddressOf WebView_NavigationStarting
-            'AddHandler wvComp.NavigationCompleted, AddressOf WebView_NavigationCompleted        
-            'AddHandler CurrentWV.CoreWebView2.DOMContentLoaded, AddressOf WebView_DOMContentLoaded
+            AddHandler CurrentWV.CoreWebView2.NavigationCompleted, AddressOf WebView_NavigationCompleted
         End If
     End Sub
 
     Private Sub WebViewStatus_CoreWebView2InitializationCompleted(sender As Object, e As CoreWebView2InitializationCompletedEventArgs)
         Dim CurrentWV As Microsoft.Web.WebView2.Wpf.WebView2 = sender
         If e.IsSuccess Then
-            AddHandler CurrentWV.CoreWebView2.DOMContentLoaded, AddressOf WebViewStatus_DOMContentLoaded
-            'AddHandler CurrentWV.NavigationStarting, AddressOf WebView_NavigationStarting
-            'AddHandler wvComp.NavigationCompleted, AddressOf WebView_NavigationCompleted        
-            'AddHandler CurrentWV.CoreWebView2.DOMContentLoaded, AddressOf WebView_DOMContentLoaded
+            AttachHandlersToWebViewog(CurrentWV.CoreWebView2)
+
+            ' LATE-LOAD RECOVERY:
+            ' If the control is already showing a page (because Source was set in Window_Loaded),
+            ' the event might have fired before we attached the handler.
+            ' Trigger it manually now to be safe.
+            If CurrentWV.CoreWebView2.Source IsNot Nothing Then
+                WebViewStatus_DOMContentLoaded(CurrentWV.CoreWebView2, Nothing)
+            End If
         End If
     End Sub
-    Private Async Sub WebViewStatus_DOMContentLoaded(sender As Object, e As CoreWebView2DOMContentLoadedEventArgs)
+
+    Private Sub WebViewStatus_NavigationCompleted(sender As Object, e As CoreWebView2NavigationCompletedEventArgs)
+        ' Fallback handler in case DOMContentLoaded is missed or the page is an SPA
+        If e.IsSuccess Then
+            ' Forward to existing logic
+            WebViewStatus_DOMContentLoaded(sender, Nothing)
+        End If
+    End Sub
+
+    Private Sub WebView_NavigationCompleted(sender As Object, e As CoreWebView2NavigationCompletedEventArgs)
+        ' Fallback handler for main views
+        If e.IsSuccess Then
+            WebView_DOMContentLoaded(sender, Nothing)
+        End If
+    End Sub
+
+    Private Async Sub WebViewStatus_DOMContentLoaded(sender As Object, e As Microsoft.Web.WebView2.Core.CoreWebView2DOMContentLoadedEventArgs)
         Dim CoreWV As Microsoft.Web.WebView2.Core.CoreWebView2 = sender
         Dim url As String = CoreWV.Source.ToString().ToLower()
+        txturi.Text = WebViewog.Source.ToString()
         If url.Contains("https://signin.crmls.org/account/login") Then
             SiteLogin(CoreWV)
             bCodeProcessing = True
@@ -665,6 +725,14 @@ $"
         If url.Contains("https://www.offergun.com/generate") Then
             Await OfferGunAutoFill()
             Await UpdateOfferGunAddress()
+
+            ' If we are on the OfferGun tab (Index 3), switch to Leads (Index 0) and refresh
+            If TabControlMain.SelectedIndex = 3 Then
+                TabControlMain.SelectedIndex = 0
+                If WebViewLeads.CoreWebView2 IsNot Nothing Then
+                    WebViewLeads.CoreWebView2.Reload()
+                End If
+            End If
         End If
 
     End Sub
@@ -857,10 +925,10 @@ $"
                 SiteLogin(CoreWV)
             ElseIf url.Contains("https://matrix.crmls.org/matrix/results.aspx") AndAlso MLSListingSub IsNot String.Empty AndAlso MLSListingMain Is String.Empty Then
                 strJScript = "var links = document.getElementsByTagName('a');var searchText = '" & MLSListingSub & "';for (var i = 0; i < links.length; i++) {if (links[i].innerText === searchText) {links[i].click();break;}}"
-                WebViewMain.CoreWebView2.ExecuteScriptAsync(strJScript)
+                Await WebViewMain.CoreWebView2.ExecuteScriptAsync(strJScript)
                 Dim linkId As String = "m_DisplayCore" 'Specify the ID of the link element
                 Dim jsCode As String = $"__doPostBack('{linkId}', 'Redisplay|581,,0');"
-                CoreWV.ExecuteScriptAsync(jsCode)
+                Await CoreWV.ExecuteScriptAsync(jsCode).ConfigureAwait(False)
                 Threading.Thread.Sleep(1200)
                 MLSListingSub = String.Empty
 
@@ -879,16 +947,16 @@ $"
              "    var event = new Event('keydown');" &
              "    speedBarSearchAlt.dispatchEvent(event);" &
              "}"
-                CoreWV.ExecuteScriptAsync(strJScript)
+                Await CoreWV.ExecuteScriptAsync(strJScript)
                 MLSListingMain = String.Empty
                 Threading.Thread.Sleep(1200)
                 Dim jsCode As String = "SpeedBarJs.onKeyDown(new KeyboardEvent('keydown'));"
-                CoreWV.ExecuteScriptAsync(jsCode)
+                Await CoreWV.ExecuteScriptAsync(jsCode)
 
                 'return SpeedBarJs.checkGo();                
-                CoreWV.ExecuteScriptAsync("document.getElementById('ctl01_m_ucSpeedBar_m_lnkGo').click();")
-                CoreWV.ExecuteScriptAsync("document.getElementById('ctl02_m_ucSpeedBar_m_lnkGo').click();")
-                CoreWV.ExecuteScriptAsync("SpeedBarJs.checkGo()")
+                Await CoreWV.ExecuteScriptAsync("document.getElementById('ctl01_m_ucSpeedBar_m_lnkGo').click();")
+                Await CoreWV.ExecuteScriptAsync("document.getElementById('ctl02_m_ucSpeedBar_m_lnkGo').click();")
+                Await CoreWV.ExecuteScriptAsync("SpeedBarJs.checkGo()")
                 Threading.Thread.Sleep(200)
             End If
 
@@ -897,13 +965,13 @@ $"
             If isAutofillEnabled Then
                 bCodeProcessing = False
                 If WebViewComp IsNot Nothing AndAlso WebViewComp.CoreWebView2 IsNot Nothing AndAlso Object.ReferenceEquals(CoreWV, WebViewComp.CoreWebView2) Then
-                    WebViewComp.CoreWebView2.ExecuteScriptAsync("document.getElementById('Fm2_Ctrl12_TB').focus();")
-                    WebViewComp.CoreWebView2.ExecuteScriptAsync("document.getElementById('Fm2_Ctrl12_TB').click();")
+                    Await WebViewComp.CoreWebView2.ExecuteScriptAsync("document.getElementById('Fm2_Ctrl12_TB').focus();")
+                    Await WebViewComp.CoreWebView2.ExecuteScriptAsync("document.getElementById('Fm2_Ctrl12_TB').click();")
                     Threading.Thread.Sleep(100)
-                    WebViewComp.CoreWebView2.ExecuteScriptAsync("document.getElementById('Fm2_Ctrl12_TB').value = '" & txtAddressSearch.Text & "';MapSearchJs.geocode();")
+                    Await WebViewComp.CoreWebView2.ExecuteScriptAsync("document.getElementById('Fm2_Ctrl12_TB').value = '" & txtAddressSearch.Text & "';MapSearchJs.geocode();")
                     Threading.Thread.Sleep(250)
                     WaitForSuggestions()
-                    WebViewComp.CoreWebView2.ExecuteScriptAsync("document.querySelectorAll('.disambiguation li')[1].click()")
+                    Await WebViewComp.CoreWebView2.ExecuteScriptAsync("document.querySelectorAll('.disambiguation li')[1].click()")
 
                     'Now enable checkboxes
                     Threading.Thread.Sleep(200)
@@ -965,10 +1033,10 @@ $"
                             '<input type="text" class="textbox" id="Fm2_Ctrl2012_TB" name="Fm2_Ctrl2012_TB" onkeypress="return SearchJs.onTextBoxKeyPress(event, this,SearchJs.isNumericKeyCode);" onpaste="return SearchJs.onTextBoxPaste(event, this,SearchJs.isNumericKeyCode);" onkeyup="SearchJs.setBackgroundColor(this, SearchJs.checkTextBox);" onchange="SearchJs.setBackgroundColor(this, SearchJs.checkTextBox);" data-mtx-track="Living Area" data-mtx-track-prop-type="NumericTextBox" data-mtx-track-prop-id="2012" maxlength="500" style="width:85px;background-color:#ffffff;" value="" title="The living area of the property, in square feet or square meters.  See the Living Area Units field to determine if this is Square Feet or Meters.  The default is Square Feet.">
                             lblSqFtRange.Content = "(" & sqftRange.ToString & ")"
 
-                            WebViewComp.CoreWebView2.ExecuteScriptAsync("document.getElementById('Fm2_Ctrl2012_TB').focus();")
-                            WebViewComp.CoreWebView2.ExecuteScriptAsync("document.getElementById('Fm2_Ctrl2012_TB').click();")
+                            Await WebViewComp.CoreWebView2.ExecuteScriptAsync("document.getElementById('Fm2_Ctrl2012_TB').focus();")
+                            Await WebViewComp.CoreWebView2.ExecuteScriptAsync("document.getElementById('Fm2_Ctrl2012_TB').click();")
                             Threading.Thread.Sleep(100)
-                            WebViewComp.CoreWebView2.ExecuteScriptAsync("document.getElementById('Fm2_Ctrl2012_TB').value = '" & sqftRange.ToString & "';")
+                            Await WebViewComp.CoreWebView2.ExecuteScriptAsync("document.getElementById('Fm2_Ctrl2012_TB').value = '" & sqftRange.ToString & "';")
                             Threading.Thread.Sleep(250)
 
                         End If
@@ -1303,6 +1371,11 @@ $"
     End Function
 
     Private Async Sub MainSaveEmail_ClickAsync(sender As Object, e As RoutedEventArgs)
+        ' Ensure Outlook is running when the user initiates the Email action.
+        If Not IsOutlookRunning() Then
+            StartOutlook()
+        End If
+
         Await sendEmailAndSave(True)
         ProcLoadNotesDG()
     End Sub
@@ -1386,7 +1459,7 @@ $"
     Public Sub sendemail(email As Boolean, emailTemplate As String, sTel As String)
         Dim MLSListingID As String = String.Empty
         Dim offerPrice As String
-        Dim arvPrice As String
+        'Dim arvPrice As String
         offerPrice = txtPrice.Text
         'arvPrice = txtARVPrice.Text
 
@@ -3186,7 +3259,7 @@ $"
     End Sub
     Sub saveSMSDataToDB()
         Dim Message As String
-        'Message = txtSMSMessage1.Text
+        Message = txtSMSMessage1.Text
         Dim SQLitecmd As New SQLiteCommand("Update EmailTemplate Set Message=@Message where Name = @EmailType")
         SQLitecmd.Parameters.AddWithValue("@Message", Message)
         SQLitecmd.Parameters.AddWithValue("@EmailType", "SMS")
@@ -3386,22 +3459,22 @@ $"
                     If prevStatus = "A" And newStatus = "S" Then 'Active to Sold
                         currStageId = "12"
                         If prevStageId = "13" Or prevStageId = "14" Then currStageId = prevStageId
-                        Await PipedriveUpdateDealStatusAndStage(pdDealId, "lost", currStageId)
-                        Await PipedriveAddNotesToDeal(pdDealId, "[CRMLS AutoUpdate] - Status change: Active to Sold")
+                        PipedriveUpdateDealStatusAndStage(pdDealId, "lost", currStageId)
+                        PipedriveAddNotesToDeal(pdDealId, "[CRMLS AutoUpdate] - Status change: Active to Sold")
                         pdStageHistory = prevStageId
                     ElseIf prevStatus = "P" And newStatus = "S" Then 'Pending to Sold
                         currStageId = "14"
-                        Await PipedriveUpdateDealStatusAndStage(pdDealId, "lost", currStageId) 'Lost Closed
-                        Await PipedriveAddNotesToDeal(pdDealId, "[CRMLS AutoUpdate] - Status change: Pending to Lost Sold")
+                        PipedriveUpdateDealStatusAndStage(pdDealId, "lost", currStageId) 'Lost Closed
+                        PipedriveAddNotesToDeal(pdDealId, "[CRMLS AutoUpdate] - Status change: Pending to Lost Sold")
                         pdStageHistory = prevStageId
                     ElseIf prevStatus = "A" And newStatus = "P" Then 'Active to Pending
                         currStageId = "13"
-                        Await PipedriveUpdateDealStatusAndStage(pdDealId, "open", currStageId) 'Pending
-                        Await PipedriveAddNotesToDeal(pdDealId, "[CRMLS AutoUpdate] - Status change: Active to Pending")
+                        PipedriveUpdateDealStatusAndStage(pdDealId, "open", currStageId) 'Pending
+                        PipedriveAddNotesToDeal(pdDealId, "[CRMLS AutoUpdate] - Status change: Active to Pending")
                         pdStageHistory = prevStageId
                     ElseIf prevStatus = "P" And newStatus = "A" Then 'Pending to Active
-                        Await PipedriveUpdateDealStatusAndStage(pdDealId, "open", pdStageHistory) 'Previous Stage Made
-                        Await PipedriveAddNotesToDeal(pdDealId, "[CRMLS AutoUpdate] - Status change: Pending to Active")
+                        PipedriveUpdateDealStatusAndStage(pdDealId, "open", pdStageHistory) 'Previous Stage Made
+                        PipedriveAddNotesToDeal(pdDealId, "[CRMLS AutoUpdate] - Status change: Pending to Active")
                         pdStageHistory = prevStageId
                     End If
 
@@ -4201,13 +4274,13 @@ $"
     End Sub
 
     Private Async Sub btnSyncPipeDrive_Click(sender As Object, e As RoutedEventArgs)
-        Await PipedriveGetStageIDsandNames()
-        Await PipedriveSyncDealsDataToPropertyTable()
+        PipedriveGetStageIDsandNames()
+        PipedriveSyncDealsDataToPropertyTable()
         LoadDataGrid()
         'chkSelectAll.IsChecked = False
     End Sub
 
-    Public Async Function PipedriveGetStageIDsandNames() As Task
+    Public Sub PipedriveGetStageIDsandNames()
         'Dim apiToken As String = txtPipeApiKey.Text
         'Dim companyDomain As String = txtPipeCompanyName.Text
 
@@ -4237,10 +4310,10 @@ $"
         'Catch ex As System.Exception
         '    MessageBox.Show($"An error occurred: {ex.Message}")
         'End Try
-    End Function
+    End Sub
 
     ' Fetches deals from Pipedrive and updates Property table with pdDealID, pdStageID, pdStageName using fxCommon.SQLExecuteReader/SQLExecuteCommand
-    Public Async Function PipedriveSyncDealsDataToPropertyTable() As Task
+    Public Sub PipedriveSyncDealsDataToPropertyTable()
         ' Load config.json for API key and domain
         'Dim apiToken As String = txtPipeApiKey.Text
         'Dim companyDomain As String = txtPipeCompanyName.Text
@@ -4321,10 +4394,10 @@ $"
         'Next
 
         MessageBox.Show("Pipedrive deals synced to Property table.")
-    End Function
+    End Sub
 
     ' Add a note to a Pipedrive deal
-    Public Async Function PipedriveAddNotesToDeal(dealId As Integer, noteContent As String) As Task
+    Public Sub PipedriveAddNotesToDeal(dealId As Integer, noteContent As String)
         'Dim apiToken As String = txtPipeApiKey.Text
         'Dim companyDomain As String = txtPipeCompanyName.Text
         'Dim url As String = $"https://{companyDomain}.pipedrive.com/api/v1/notes?api_token={apiToken}"
@@ -4342,10 +4415,10 @@ $"
             '    MessageBox.Show($"Failed to add note: {response.StatusCode}" & vbCrLf & Await response.Content.ReadAsStringAsync())
             'End If
         End Using
-    End Function
+    End Sub
 
     ' Update a Pipedrive deal's status and/or stage_id
-    Public Async Function PipedriveUpdateDealStatusAndStage(dealId As Integer, Optional status As String = Nothing, Optional stageId As Integer = Nothing) As Task
+    Public Sub PipedriveUpdateDealStatusAndStage(dealId As Integer, Optional status As String = Nothing, Optional stageId As Integer = Nothing)
         ' Load API key and domain from config.json
         'Dim apiToken As String = txtPipeApiKey.Text
         'Dim companyDomain As String = txtPipeCompanyName.Text
@@ -4367,13 +4440,13 @@ $"
             '    MessageBox.Show($"Failed to update deal: {response.StatusCode}" & vbCrLf & Await response.Content.ReadAsStringAsync())
             'End If
         End Using
-    End Function
+    End Sub
 
     ' Add or update a contact (person) in Pipedrive and return the person id. Optionally link to organization.
     Public Async Function PipeDriveAddPersonContact(name As String, email As String, Optional phone1 As String = Nothing, Optional phone2 As String = Nothing, Optional phone3 As String = Nothing, Optional organization As Integer? = Nothing) As Task(Of Integer?)
         'Dim apiToken As String = txtPipeApiKey.Text
         'Dim companyDomain As String = txtPipeCompanyName.Text
-        Dim personId As Integer? = Await PipeDriveSearchPersonByEmail(email)
+        Dim personId As Integer? = PipeDriveSearchPersonByEmail(email)
         Dim phones As New List(Of Object)()
         If Not String.IsNullOrEmpty(phone1) Then phones.Add(New With {.value = phone1, .label = "work"})
         If Not String.IsNullOrEmpty(phone2) Then phones.Add(New With {.value = phone2, .label = "work"})
@@ -4417,7 +4490,7 @@ $"
     End Function
 
     ' Search for a person by email. Returns person id if found, else Nothing.
-    Public Async Function PipeDriveSearchPersonByEmail(email As String) As Task(Of Integer?)
+    Public Function PipeDriveSearchPersonByEmail(email As String) As Integer?
         'Dim apiToken As String = txtPipeApiKey.Text
         'Dim companyDomain As String = txtPipeCompanyName.Text
         'Dim url As String = $"https://{companyDomain}.pipedrive.com/api/v1/persons/search?api_token={apiToken}&term={email}&fields=email&exact_match=true"
@@ -4441,7 +4514,7 @@ $"
     End Function
 
     ' Get list of emails related to a person id from Pipedrive.
-    Public Async Function PipeDriveGetPersonEmails(personId As Integer) As Task(Of List(Of JObject))
+    Public Function PipeDriveGetPersonEmails(personId As Integer) As List(Of JObject)
         'Dim apiToken As String = txtPipeApiKey.Text
         'Dim companyDomain As String = txtPipeCompanyName.Text
         'Dim url As String = $"https://{companyDomain}.pipedrive.com/api/v1/persons/{personId}/mailMessages?api_token={apiToken}"
@@ -4470,7 +4543,7 @@ $"
     End Function
 
     ' Links email threads to deals if the email subject contains the property address
-    Public Async Function PipeDriveMapEmailThreadsUsingPersonIds() As Task
+    Public Sub PipeDriveMapEmailThreadsUsingPersonIds()
         ' 1. Get all properties with pdPersonID and SavedAddress and pdDealID
         'Dim apiToken As String = txtPipeApiKey.Text
         'Dim companyDomain As String = txtPipeCompanyName.Text
@@ -4546,7 +4619,7 @@ $"
             Next
         End Using
         MessageBox.Show("Email thread mapping completed.")
-    End Function
+    End Sub
     Private Function pdGetSafeStringValue(ByVal deal As JObject, ByVal fieldKey As String) As String
         ' Safely get the custom_fields JObject
         Dim customFields As JObject
@@ -4632,7 +4705,7 @@ $"
     End Sub
 
     Private Async Sub btnLinkEmails_Click(sender As Object, e As RoutedEventArgs)
-        Await PipeDriveMapEmailThreadsUsingPersonIds()
+        PipeDriveMapEmailThreadsUsingPersonIds()
     End Sub
 
     Private Sub chkSelectAll_Checked(sender As Object, e As RoutedEventArgs)
